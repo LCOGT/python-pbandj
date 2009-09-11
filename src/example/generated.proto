@@ -1,0 +1,22 @@
+service AddressService {
+    rpc add_contact (AddressBook) returns (Response);
+    rpc get_group (ContactGroup) returns (ContactGroup);
+}
+message ContactGroup {
+    optional int32 id = 1;
+    optional string group_name = 2;
+    repeated AddressBook member = 3;
+}
+message AddressBook {
+    repeated string group = 1;
+    optional string phone = 2;
+    optional string birthday = 3;
+    optional bool favorite_flag = 4;
+    optional string name = 5;
+    optional string email = 6;
+}
+message Response {
+    optional bool success = 1;
+    optional int32 error_code = 2;
+    optional string error_reason = 3;
+}
