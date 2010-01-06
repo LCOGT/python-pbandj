@@ -16,15 +16,16 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from time import time, sleep
-from protobuf.channel import SocketRpcChannel
-from pbandj.rpc import ProtoBufRpcRequest
+#from protobuf.channel import SocketRpcChannel
+#from pbandj.rpc import ProtoBufRpcRequest
+from protobuf import RpcService
 import generated_pb2 as proto
     
 class AddressBook(object):
     """ A wrapper class for a protocol buffer AddressBook message """
     
     def __init__(self):
-        self.service = ProtoBufRpcRequest(proto.AddressService_Stub)
+        self.service = RpcService(proto.AddressService_Stub, 8091, 'localhost')
 
     def add_contact(self, name, email, phone, birthday, favorite, groups=[]):
         """ Add a contact to the address book """
@@ -32,14 +33,16 @@ class AddressBook(object):
         msg.name = name
         msg.email = email
         msg.phone = phone
-        msg.birthday = birthday
+        msg.birthday.year = 1976
+        msg.birthday.month = 10
+        msg.birthday.day = 17
         msg.favorite_flag = favorite
         for group in groups:
             msg.group.append(group)
-        return self.service.add_contact(msg, 5000)
+        return self.service.add_contact(msg, timeout=5000)
     
     def get_group(self, group_name):
         """ Get the contacts in a group """
         msg = proto.ContactGroup()
         msg.group_name = group_name
-        return self.service.get_group(msg, 5000)
+        return self.service.get_group(msg, timeout=5000)

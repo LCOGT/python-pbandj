@@ -68,8 +68,8 @@ _ADDRESSBOOK = descriptor.Descriptor(
       options=None),
     descriptor.FieldDescriptor(
       name='birthday', full_name='AddressBook.birthday', index=2,
-      number=3, type=9, cpp_type=9, label=1,
-      default_value=unicode("", "utf-8"),
+      number=3, type=11, cpp_type=10, label=1,
+      default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
@@ -138,8 +138,10 @@ _RESPONSE = descriptor.Descriptor(
   ],
   options=None)
 
+import django_types_pb2
 
 _CONTACTGROUP.fields_by_name['member'].message_type = _ADDRESSBOOK
+_ADDRESSBOOK.fields_by_name['birthday'].message_type = django_types_pb2._DATE
 
 class ContactGroup(message.Message):
   __metaclass__ = reflection.GeneratedProtocolMessageType

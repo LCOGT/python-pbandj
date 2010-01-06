@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!python
 # Copyright (c) 2009 Las Cumbres Observatory.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,14 +23,21 @@ from ez_setup import use_setuptools
 use_setuptools()
 
 from setuptools import setup, find_packages
+import pbinstaller
 
-setup(
-    name = "pbandj",
-    version = "0.1",
-    packages = find_packages('src/main'),
-    package_dir = {'':'src/main'},
-    install_requires = ['Django>=1.0.2-final','protobuf>=2.0.3','protobuf_socket_rpc==1.2'],
-    dependency_links = ['http://code.google.com/p/protobuf-socket-rpc/downloads/list'],
-    author = "Zachary Walker",
-    author_email = "zwalker@lcogt.net",
-    description = "Utility for creating Protocol Buffer Messages and RPC services from a Django model",)
+
+PROTOBUF_VERSION = '2.2.0'
+
+
+if __name__ == '__main__':
+    pbinstaller.install(PROTOBUF_VERSION)
+
+    setup(
+        name = "pbandj",
+        version = "1.0.0",
+        packages = ['pbandj'],
+        package_dir = {'':'src/main'},
+        install_requires = ['Django>=1.0.2-final','protobuf>=%s' % PROTOBUF_VERSION,'protobuf_socket_rpc>=1.3.1'],
+        author = "Zachary Walker",
+        author_email = "zwalker@lcogt.net",
+        description = "Utility for creating Protocol Buffer Messages and RPC services from a Django model",)

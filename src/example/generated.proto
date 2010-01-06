@@ -1,3 +1,4 @@
+import "django_types.proto";
 service AddressService {
     rpc add_contact (AddressBook) returns (Response);
     rpc get_group (ContactGroup) returns (ContactGroup);
@@ -10,7 +11,7 @@ message ContactGroup {
 message AddressBook {
     repeated string group = 1;
     optional string phone = 2;
-    optional string birthday = 3;
+    optional Date birthday = 3;
     optional bool favorite_flag = 4;
     optional string name = 5;
     optional string email = 6;

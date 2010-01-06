@@ -1,5 +1,7 @@
 from django.db import models
-from pbandj.pbandj import ProtocolBuffer as Proto
+from pbandj.model import ProtocolBuffer as Proto
+from pbandj import type_map
+from pbandj.conversion import Converter
 
 """ Alias for ProtocolBuffer.Field """
 Field = Proto.Field
@@ -21,7 +23,7 @@ class ContactGroup(models.Model):
     group_name            = models.CharField(max_length=25)
     member_name           = models.ForeignKey(AddressBook)
  
-#The protocol buffer object    
+# The protocol buffer object    
 pbuf = Proto()
 
 def onAddContact(service_impl, controller, request, done):
@@ -30,12 +32,17 @@ def onAddContact(service_impl, controller, request, done):
     from generated_pb2 import Response
     resp = Response()
     print "Converting to django"
-    contact = pbuf.toDjango(request)
+    converter = Converter()
+    try:
+        contact = converter.toDjangoObj(pbuf, request)
+    except Exception, e:
+        print e
     contact.save()
     for group in request.group:
         cont_grp = ContactGroup()
         cont_grp.group_name = group
         cont_grp.member_name = contact
+        
         cont_grp.save()
     resp.success = True
     print "About to exit"
@@ -48,35 +55,44 @@ def onGetGroup(service_impl, controller, request, done):
     members = ContactGroup.objects.filter(group_name=request.group_name)
     resp = PbGroup()
     resp.group_name = request.group_name
-    print "Adding memebers"
+    print "Adding memebers to response msg"
     for contact in members:
         print "Converting"
-        pbuf.toProtoMsg(contact.member_name, resp.member.add())
+        converter = Converter()
+        converter.toProtoMsg(pbuf, contact.member_name, resp.member.add())
         print "Done converting"
     done.run(resp)
     
 def genProto():
     """ Generate and return the protocol buffer description object """
     
-    #Create a generic response message
+    # Create a generic response message
     rsp_msg = Proto.Message("Response")
-    rsp_msg.addField(Field(Field.OPTIONAL, "success", Field.BOOL))
-    rsp_msg.addField(Field(Field.OPTIONAL, "error_code", Field.INT32))
-    rsp_msg.addField(Field(Field.OPTIONAL, 'error_reason', Field.STRING))
-    #Add the respons message to the proto
+    rsp_msg.addField(Field(Field.OPTIONAL, "success",
+                           type_map.base.PB_TYPE_BOOL))
+    rsp_msg.addField(Field(Field.OPTIONAL, "error_code",
+                           type_map.base.PB_TYPE_INT32))
+    rsp_msg.addField(Field(Field.OPTIONAL, 'error_reason',
+                           type_map.base.PB_TYPE_STRING))
+    # Add the respons message to the proto
     pbuf.addMessage(rsp_msg)
     
-    #Create a contact message from the AddressBook model
-    cont_msg = pbuf.genMsg('AddressBook',AddressBook,exclude=["id"])
-    cont_msg.addField(Field(Field.REPEATED,'group',Field.STRING))
-    #Create a service accepting contact messages
-    pbuf.genRpc("AddressService",'add_contact',
+    # Create a contact message from the AddressBook model
+    cont_msg = type_map.genMsg('AddressBook',AddressBook,exclude=["id"])
+    cont_msg.addField(Field(Field.REPEATED,'group',
+                            type_map.base.PB_TYPE_STRING))
+    pbuf.addMessage(cont_msg)
+    
+    # Create a service accepting contact messages
+    pbuf.addRpc("AddressService",'add_contact',
                      cont_msg, rsp_msg, onAddContact)
     
-    #Create a group message from the ContactGroup Model
-    grp_msg = pbuf.genMsg('ContactGroup',ContactGroup,exclude=["member_name"])
+    # Create a group message from the ContactGroup Model
+    grp_msg = type_map.genMsg('ContactGroup',ContactGroup,exclude=["member_name"])
     grp_msg.addField(Field(Field.REPEATED,'member', cont_msg))
-    #Create a service returning memebers of a contact group
-    pbuf.genRpc("AddressService", 'get_group',
+    pbuf.addMessage(grp_msg)
+    
+    # Create a service returning memebers of a contact group
+    pbuf.addRpc("AddressService", 'get_group',
                     grp_msg, grp_msg, onGetGroup)
     return pbuf
