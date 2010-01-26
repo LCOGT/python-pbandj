@@ -83,7 +83,6 @@ class ProtoBufRpcRequest(object):
         #defined as 'global done'
         #done = False
         def callback(request, response):
-            print "In callback"
             result["response"]  = response
             result["done"]      = True
             result["error_msg"] = ""
@@ -97,19 +96,13 @@ class ProtoBufRpcRequest(object):
         #Make the RPC call and pass in a generic object with a
         #function called "run" linked to callback
         try:
-            print "Calling rpc"
-            print service
-            print controller
-            print msg
             #Attempting to do something similar to a JAVA anonymous class
             #Create an instalce of a new generic type initialized with a
             #dict that has a run method pointing to the callback function
             rpc(service, controller, msg, type("", (), {"run":callback})())
         except Exception, info:
-            print "Exception ", info
             print controller.error
         except:
-            print "Uhh I don't know"
             print controller.error
         end = time() + (timeout / 1000)
         

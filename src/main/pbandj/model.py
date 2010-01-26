@@ -70,6 +70,24 @@ class ProtocolBuffer(object):
                 self.name2val = dict(name2val)
                 self.dj2val = dict(dj2val)
         
+        def __eq__(self, other):
+            if not isinstance(other, self.__class__):
+                return False
+#            print "Enum compare", (self.name == other.name ,
+#                     self.name2val == other.name2val , 
+#                     self.dj2val == other.dj2val)
+            return (self.name == other.name and
+                     self.name2val == other.name2val and 
+                     self.dj2val == other.dj2val)
+            
+        def __ne__(self, other):
+            return not self.__eq__(other)
+        
+        # Hacked hash.  Enums aren't imutable as implemented.
+        # Be careful using hash
+        def __hash__(self):
+            return hash(self.name) ^ hash(tuple(self.name2val.items())) ^ hash(tuple(self.dj2val.items()))
+        
         def __str__(self):
             proto = 'enum %s {\n' % self.name
             for key in self.name2val:
@@ -108,6 +126,22 @@ class ProtocolBuffer(object):
             self.usage   = usage
             self.dj_type = dj_type
             self.pb_type = pb_type
+            
+        def __eq__(self, other):
+            if not isinstance(other, self.__class__):
+                return False
+            return (self.name == other.name ,
+                    self.usage == other.usage and
+                    self.dj_type == other.dj_type and
+                    self.pb_type == other.pb_type)
+        
+        def __ne_(self, other):
+            return not self.__eq__(other)
+        
+        # Hacked hash.  Fields aren't immutable as implemented.
+        # Be careful using hash
+        def __hash__(self):
+            return hash(self.name) ^ hash(self.usage) ^ hash(self.dj_type) ^ hash(self.pb_type)
              
        
              
@@ -136,22 +170,77 @@ class ProtocolBuffer(object):
             self.mapped_fields      = []
             self.message_fields     = []
             self.enums              = []
+            self.__iadd__           = None
+        
+        def __eq__(self, other):
+            if not isinstance(other, self.__class__):
+                return False
+            if self.name != other.name: return False
+            if len(self.fields) != len(other.fields): return False
+            if len(self.mapped_fields) != len(other.mapped_fields): return False
+            if len(self.message_fields) != len(other.message_fields): return False
+            if len(self.enums) != len(other.enums): return False
+            for field in self.fields:
+                if other.fields.count(field) != self.fields.count(field):
+                    return False #break
+            if self.django_model_class != other.django_model_class: return False
+            for field in self.mapped_fields:
+                if other.mapped_fields.count(field) != self.mapped_fields.count(field):
+                    return False
+            for field in self.message_fields:
+                if other.message_fields.count(field) != self.message_fields.count(field):
+                    return False
+            for enum in self.enums:
+                if other.enums.count(enum) != self.enums.count(enum):
+                    return False
             
-        def addField(self, field):
+            return True
+            
+        def __ne__(self, other):
+            return not self.__eq__(other)
+        
+        # Hacked hash.  Messages aren't immutable as implemented.
+        # Be careful using hash
+        def __hash__(self):
+            return hash(self.name) ^ hash(tuple(self.mapped_fields))
+        
+        def __add__(self, other):
+            if not isinstance(other, self.__class__):
+                raise Exception("Can't add type %s to a %s" % 
+                                (type(other), type(self)))
+            s1 = set(self.message_fields + self.fields + self.enums)
+            s2 = set(other.message_fields + other.fields + other.enums)
+            diff = s1.symmetric_difference(s2)
+            self_names = set([obj.name for obj in s1.intersection(diff)])
+            other_names = set([obj.name for obj in s2.intersection(diff)])
+            colissions = self_names.intersection(other_names)
+            if colissions != set():
+                raise Exception("Namespace collision between messages on %s" % colissions)
+            new_msg = ProtocolBuffer.Message(self.name, self.django_model_class)  
+            new_msg.mapped_fields = self.mapped_fields
+            new_msg.fields = list(set(self.fields).union(set(other.fields)))
+            new_msg.message_fields = list(set(self.message_fields).union(set(other.message_fields)))
+            new_msg.enums = list(set(self.enums).union(set(other.enums)))
+            return new_msg
+            
+            
+        def addField(self, *fields):
             """ Add a field to this Protocol Buffer message   
                 Accepted Arguments:
                 field -- (ProtocolBuffer.Field) A field to be added to
                          the message
             """
             # Check if this field is mapped to a django type
-            if field.dj_type is None:
-                # Has the field already been mapped to a message
-                if type(field.pb_type) == ProtocolBuffer.Message:
-                    self.message_fields.append(field)
+            for field in fields:
+                if field.dj_type is None:
+                    # Has the field already been mapped to a message
+                    if type(field.pb_type) == ProtocolBuffer.Message:
+                        self.message_fields.append(field)
+                    else:
+                        self.fields.append(field)
                 else:
-                    self.fields.append(field)
-            else:
-                self.mapped_fields.append(field)
+                    self.mapped_fields.append(field)
+
             
         def __str__(self):
             """ Produces a .proto file message declaration
@@ -308,7 +397,7 @@ class ProtocolBuffer(object):
     def proto_filename(self):
         return self.module_name + ".proto"
           
-    def addMessage(self, message):
+    def addMessage(self, message, user_type=False):
         """ Add a message to this Protocol Buffer definition.  Also adds any
         messages that are used as fields of this message.  Message fields added
         after the message is added to the protocol buffer must be added to the
@@ -320,24 +409,55 @@ class ProtocolBuffer(object):
             Accepted Arguments:
             message        -- (ProtocolBuffer.Message) The message to
                               be added to the Protcol Buffer
+            user_type -- If true no mapping will be added for django to
+                protobuf conversion.  Conversion can still be done by calling
+                toProtoMsg with dest_obj set to the desired type.  This allows
+                multiple messages mapped to the same Django type while only having
+                a single default message used for auto conversion.
         """
-        # Add mapping by message name
-        self.messages[message.name] = message
-        # Add mapping by django model class
-        self.messages[message.django_model_class] = message
-        # Add message mapping for fields of type message 
-        for field in message.mapped_fields:
-            if (isinstance(field.pb_type, ProtocolBuffer.Message) and
-                not field.pb_type.django_model_class is None):
-                if (self.messages.has_key(field.pb_type.name) and
-                    self.messages[field.pb_type.name] != field.pb_type):
-                    raise Exception("There is already a message named %s" %
-                                    field.pb_type.name)
-                if (self.messages.has_key(field.pb_type.django_model_class) and
-                    self.messages[field.pb_type.django_model_class] != field.pb_type):
-                    raise Exception("There is already a message mapped to django type %s" %
-                                    field.pb_type.django_model_class.__name__)
-                self.addMessage(field.pb_type)
+        # Check if there is already a message with the same name
+        orig_msg = self.messages.get(message.name, None)
+        if self.messages.has_key(message.name):
+            #print "Collision on %s" % message.name
+            if self.messages[message.name] != message:
+                if (self.messages[message.name].mapped_fields == message.mapped_fields):
+                    #print "Merging messages"
+                    message = self.messages[message.name] + message
+                else:
+                    raise Exception("There is already a message named %s whose mapped fields differs from the added message" %
+                                    message.name)
+        
+        # Check for a mapping from the django type diffing from the added message        
+        if (self.messages.has_key(message.django_model_class) and
+            self.messages[message.django_model_class] != message and
+            not user_type):
+            if (self.messages[message.django_model_class] != message and
+                self.messages[message.django_model_class].mapped_fields == message.mapped_fields):
+                #print "Merging messages"
+                message = self.messages[message.name] + message
+            else:
+                raise Exception("There is already a message mapped to django type %s whose mapped fields differ from the added message" %
+                                message.django_model_class.__name__)
+        if orig_msg != message:
+            # Add mapping by message name
+            self.messages[message.name] = message
+            # Add mapping by django model class
+            # TODO: Problem here if two messages are added with the same django_model_class
+            #       With different fields within the message.  Each message added would override
+            #       the previous one.
+            if not message.django_model_class is None and user_type == False:
+                    self.messages[message.django_model_class] = message
+    
+            # Add message mapping for fields of type message 
+            for field in message.mapped_fields:
+                if (isinstance(field.pb_type, ProtocolBuffer.Message) and
+                    not field.pb_type.django_model_class is None):
+                    #print "In %s.%s Adding type %s, %s" % (message.name, field.name, field.pb_type.name, user_type)
+                    self.addMessage(field.pb_type, user_type=user_type)
+            for field in message.message_fields:
+                #print "In %s.%s Adding type %s, %s" % (message.name, field.name, field.pb_type.name, True)
+                self.addMessage(field.pb_type, user_type=True)
+            
     
     
     def addRpc(self, service_name, method_name, in_msg, out_msg, handler):
@@ -362,7 +482,9 @@ class ProtocolBuffer(object):
             instance
         """
         out= ""
+        imported_msgs = []
         for proto in self.imports:
+            imported_msgs += proto.messages.values()
             if type(proto) is ProtocolBuffer:
                 out += 'import "%s";\n' % proto.proto_filename()
             else:
@@ -375,10 +497,13 @@ class ProtocolBuffer(object):
                        method.in_msg_type.name + ") returns (" + \
                        method.out_msg_type.name + ");\n"
             out += "}\n" 
-            
+        
+        #print imported_msgs
+        # Only include messages that are not defined in an import
         for key in self.messages.keys():
             if isinstance(key,str):
-                out += self.messages[key].__str__()
+                if not self.messages[key] in imported_msgs:
+                    out += self.messages[key].__str__()
             
         return out
         

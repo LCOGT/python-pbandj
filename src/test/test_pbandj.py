@@ -27,6 +27,7 @@ from datetime import datetime
 from django.conf import ENVIRONMENT_VARIABLE
 os.environ[ENVIRONMENT_VARIABLE] = 'django_test.settings'
 
+from django.db import models as django_models
 from pbandj.model import ProtocolBuffer
 from pbandj.type_map import DJ2PB, genMsg
 from pbandj.conversion import Converter
@@ -294,7 +295,7 @@ class ServiceTestCase(unittest.TestCase):
     def test_n_services(self):
         client1 = RpcService(proto.SimpleService_Stub, self.service_port,
                             "localhost")
-        client2 = RpcService(proto.SimpleService2_Stub, self.service_port,
+        client2 = RpcService(proto.SimpleService2_Stub, self.service_port + 1,
                             "localhost")
         test_msg = proto.Simple()
         test_msg.val = 1
@@ -318,7 +319,7 @@ class ForeignKeyTestCase(unittest.TestCase):
         
         self.django_class_fields = [field for field in 
                                models.ForeignKeyTest._meta.local_fields]
-        self.pb_field_names = [f.name for f in self.fkt.mapped_fields]
+        self.pb_fields_by_name = dict([(f.name, f) for f in self.fkt.mapped_fields])
         mod_name = pbandj.genMod(self.pb)
         global proto
         proto = __import__(mod_name)
@@ -340,23 +341,25 @@ class ForeignKeyTestCase(unittest.TestCase):
         ''' Ensure that all fields from the django type exist in the generated
             protocol buffer type and their type matches the type map
         '''
-        pb_fields_by_name = dict([(f.name, f) for f in self.fkt.mapped_fields])
         for field in self.django_class_fields:
-            self.assert_(self.pb_field_names.count(field.name) > 0,
+            self.assert_(self.pb_fields_by_name.has_key(field.name),
                          "Django field %s does not exist in protocol buffer message" % field.name)
-            pb_field = pb_fields_by_name[field.name]
+            pb_field = self.pb_fields_by_name[field.name]
             dj_type = type(field)
-            self.assert_(type(pb_field.pb_type) == DJ2PB[dj_type],
+            expected_type = [DJ2PB[dj_type]]
+            if (dj_type == django_models.ForeignKey or dj_type == django_models.ManyToManyField):
+                expected_type.append(ProtocolBuffer.Message)
+            self.assert_(type(pb_field.pb_type) in expected_type,
                          "Protocol Buffer field type %s does not match type %s specified in type map for Django type %s" %
                          (type(pb_field.pb_type), DJ2PB[dj_type],
                           dj_type.__name__))
             
     def test_invertible(self):
         test = proto.ForeignKeyTest()
-        test.fkey_test = self.simple.pk
+        test.fkey_test_id = self.simple.pk
         dj_test = self.con.toDjangoObj(self.pb, test)
         pb_test = self.con.toProtoMsg(self.pb, dj_test, proto)
-        self.assertEqual(test, pb_test,
+        self.assertEqual(test.fkey_test_id, pb_test.fkey_test_id,
                          "Foreign key test objects not equal after conversion")
         
 class ForeignKeyRecursionTestCase(unittest.TestCase):
@@ -372,7 +375,7 @@ class ForeignKeyRecursionTestCase(unittest.TestCase):
         
         self.django_class_fields = [field for field in 
                                models.ForeignKeyTest._meta.local_fields]
-        self.pb_field_names = [f.name for f in self.fkt.mapped_fields]
+        self.pb_fields_by_name = dict([(f.name, f) for f in self.fkt.mapped_fields])
         mod_name = pbandj.genMod(self.pb)
         global proto
         proto = __import__(mod_name)
@@ -394,23 +397,25 @@ class ForeignKeyRecursionTestCase(unittest.TestCase):
         ''' Ensure that all fields from the django type exist in the generated
             protocol buffer type and their type matches the type map
         '''
-        pb_fields_by_name = dict([(f.name, f) for f in self.fkt.mapped_fields])
         for field in self.django_class_fields:
-            self.assert_(self.pb_field_names.count(field.name) > 0,
+            self.assert_(self.pb_fields_by_name.has_key(field.name),
                          "Django field %s does not exist in protocol buffer message" % field.name)
-            pb_field = pb_fields_by_name[field.name]
+            pb_field = self.pb_fields_by_name[field.name]
             dj_type = type(field)
-            self.assert_(type(pb_field.pb_type) == DJ2PB[dj_type],
+            expected_type = [DJ2PB[dj_type]]
+            if (dj_type == django_models.ForeignKey or dj_type == django_models.ManyToManyField):
+                expected_type.append(ProtocolBuffer.Message)
+            self.assert_(type(pb_field.pb_type) in expected_type,
                          "Protocol Buffer field type %s does not match type %s specified in type map for Django type %s" %
                          (type(pb_field.pb_type), DJ2PB[dj_type],
                           dj_type.__name__))
             
     def test_invertible(self):
         test = proto.ForeignKeyTest()
-        test.fkey_test.val = self.simple.val
+        test.fkey_test_id = self.simple.pk
         dj_test = self.con.toDjangoObj(self.pb, test)
         pb_test = self.con.toProtoMsg(self.pb, dj_test, proto)
-        self.assertEqual(test, pb_test,
+        self.assertEqual(test.fkey_test_id, pb_test.fkey_test_id,
                          "Foreign key test objects not equal after conversion")
         
     def test_save_invertible(self):
@@ -420,7 +425,7 @@ class ForeignKeyRecursionTestCase(unittest.TestCase):
         dj_test.save()
         pb_test = self.con.toProtoMsg(self.pb, models.ForeignKeyTest.objects.get(pk=dj_test.pk), proto)
         pb_test.ClearField('id')
-        self.assertEqual(test, pb_test,
+        self.assertEqual(test.fkey_test, pb_test.fkey_test,
                          "Foreign key test objects not equal after save")
         
 class ManyToManyTestCase(unittest.TestCase):
@@ -435,13 +440,16 @@ class ManyToManyTestCase(unittest.TestCase):
         self.django_class_fields = [field for field in 
                                models.ManyToManyTest._meta.local_fields +
                                models.ManyToManyTest._meta.many_to_many]
-        self.pb_field_names = [f.name for f in self.m2m.mapped_fields]
+        self.pb_fields_by_name = dict([(f.name, f) for f in self.m2m.mapped_fields])
         mod_name = pbandj.genMod(self.pb)
         global proto
         proto = __import__(mod_name)
-        self.simple = models.Simple()
-        self.simple.val = 1234
-        self.simple.save()
+        self.simple1 = models.Simple()
+        self.simple1.val = 1234
+        self.simple1.save()
+        self.simple2 = models.Simple()
+        self.simple2.val = 5678
+        self.simple2.save()
         self.con = Converter()
         
     def test_genMsg(self):
@@ -457,13 +465,15 @@ class ManyToManyTestCase(unittest.TestCase):
         ''' Ensure that all fields from the django type exist in the generated
             protocol buffer type and their type matches the type map
         '''
-        pb_fields_by_name = dict([(f.name, f) for f in self.m2m.mapped_fields])
         for field in self.django_class_fields:
-            self.assert_(self.pb_field_names.count(field.name) > 0,
+            self.assert_(self.pb_fields_by_name.has_key(field.name),
                          "Django field %s does not exist in protocol buffer message" % field.name)
-            pb_field = pb_fields_by_name[field.name]
+            pb_field = self.pb_fields_by_name[field.name]
             dj_type = type(field)
-            self.assert_(type(pb_field.pb_type) == DJ2PB[dj_type],
+            expected_type = [DJ2PB[dj_type]]
+            if (dj_type == django_models.ForeignKey or dj_type == django_models.ManyToManyField):
+                expected_type.append(ProtocolBuffer.Message)
+            self.assert_(type(pb_field.pb_type) in expected_type,
                          "Protocol Buffer field type %s does not match type %s specified in type map for Django type %s" %
                          (type(pb_field.pb_type), DJ2PB[dj_type],
                           dj_type.__name__))
@@ -471,7 +481,7 @@ class ManyToManyTestCase(unittest.TestCase):
     def test_toDjangoObj(self):
         pb_test = proto.ManyToManyTest()
         pb_test.test_val = 1
-        pb_test.m2m_test.append(2)
+        pb_test.m2m_test_id.append(2)
         dj_test = self.con.toDjangoObj(self.pb, pb_test)
         self.assertEqual(pb_test.test_val, dj_test.test_val,
                          'Django object does not match source Protocol Buffer Message')
@@ -480,23 +490,24 @@ class ManyToManyTestCase(unittest.TestCase):
         dj_test = models.ManyToManyTest()
         dj_test.test_val = 1
         dj_test.save()
-        dj_test.m2m_test.add(self.simple)        
-        dj_test2 = models.ManyToManyTest()
-        dj_test2.test_val = 1
-        dj_test2.save()
-        dj_test2.m2m_test.add(self.simple)  
+        dj_test.m2m_test.add(self.simple1) 
+        dj_test.m2m_test.add(self.simple2)       
+#        dj_test2 = models.ManyToManyTest()
+#        dj_test2.test_val = 2
+#        dj_test2.save()
+#        dj_test2.m2m_test.add(self.simple) 
         pb_test = self.con.toProtoMsg(self.pb, dj_test, proto)
-        self.assert_(len(pb_test.m2m_test) == 2,
-                     "Added 2 objects to the relation but found %d" % len(pb_test.m2m_test))
-        self.assertEqual(pb_test.m2m_test[0], self.simple.pk,
+        self.assert_(len(pb_test.m2m_test_id) == 2,
+                     "Added 2 objects to the relation but found %d" % len(pb_test.m2m_test_id))
+        self.assertEqual(pb_test.m2m_test_id[0], self.simple1.pk,
                          "1st assoc object doesn't match the original")
-        self.assertEqual(pb_test.m2m_test[1], self.simple.pk,
+        self.assertEqual(pb_test.m2m_test_id[1], self.simple2.pk,
                          "2nd assoc object doesn't match the original")
         
-class ManyToManyThroughTestCase(unittest.TestCase):
+class ManyToManyThrough_Recurse_TestCase(unittest.TestCase):
     
     def setUp(self):
-        self.module_name = "m2m_through_test"
+        self.module_name = "m2m_through_test_recurse"
         self.pb = ProtocolBuffer(self.module_name)
         self.m2m = genMsg('ManyToManyThroughTest',
                                         models.ManyToManyThroughTest, recurse_fk=True)
@@ -505,7 +516,13 @@ class ManyToManyThroughTestCase(unittest.TestCase):
         self.django_class_fields = [field for field in 
                                models.ManyToManyThroughTest._meta.local_fields +
                                models.ManyToManyThroughTest._meta.many_to_many]
-        self.pb_field_names = [f.name for f in self.m2m.mapped_fields]
+        
+        self.django_assoc_class_fields = [field for field in 
+                               models.M2MAssocTest._meta.local_fields +
+                               models.M2MAssocTest._meta.many_to_many]
+        
+        self.pb_fields_by_name = dict([(f.name, f) for f in self.m2m.mapped_fields])
+        self.pb_assoc_fields_by_name = dict([(f.name, f) for f in self.pb_fields_by_name['m2m_test'].pb_type.mapped_fields])
         mod_name = pbandj.genMod(self.pb)
         global proto
         proto = __import__(mod_name)
@@ -527,27 +544,142 @@ class ManyToManyThroughTestCase(unittest.TestCase):
         ''' Ensure that all fields from the django type exist in the generated
             protocol buffer type and their type matches the type map
         '''
-        pb_fields_by_name = dict([(f.name, f) for f in self.m2m.mapped_fields])
-        #print pb_fields_by_name
         for field in self.django_class_fields:
-            #print field
-            self.assert_(self.pb_field_names.count(field.name) > 0,
+            self.assert_(self.pb_fields_by_name.has_key(field.name),
                          "Django field %s does not exist in protocol buffer message" % field.name)
-            pb_field = pb_fields_by_name[field.name]
+            pb_field = self.pb_fields_by_name[field.name]
             dj_type = type(field)
-            self.assert_(type(pb_field.pb_type) == DJ2PB[dj_type],
+            expected_type = [DJ2PB[dj_type]]
+            if (dj_type == django_models.ForeignKey or dj_type == django_models.ManyToManyField):
+                expected_type.append(ProtocolBuffer.Message)
+            self.assert_(type(pb_field.pb_type) in expected_type,
                          "Protocol Buffer field type %s does not match type %s specified in type map for Django type %s" %
                          (type(pb_field.pb_type), DJ2PB[dj_type],
                           dj_type.__name__))
     
-#    def test_toDjangoObj(self):
-#        pb_test = proto.ManyToManyTest()
-#        pb_test.test_val = 1
-#        pb_test.m2m_test.append(2)
-#        dj_test = self.con.toDjangoObj(self.pb, pb_test)
-#        self.assertEqual(pb_test.test_val, dj_test.test_val,
-#                         'Django object does not match source Protocol Buffer Message')
-#    
+    def test_genMsg_through_fields_exist(self):
+        for field in self.django_assoc_class_fields:
+            self.assert_(self.pb_assoc_fields_by_name.has_key(field.name),
+                         "Django field %s does not exist in protocol buffer message for through relation" % field.name)
+            pb_field = self.pb_assoc_fields_by_name[field.name]
+            dj_type = type(field)
+            expected_type = [DJ2PB[dj_type]]
+            if dj_type == django_models.ForeignKey or dj_type == django_models.ManyToManyField:
+                expected_type.append(ProtocolBuffer.Message)
+            self.assert_(type(pb_field.pb_type) in expected_type,
+                         "Protocol Buffer field type %s does not match type %s specified in type map for Django type %s" %
+                         (type(pb_field.pb_type), DJ2PB[dj_type],
+                          dj_type.__name__))
+            if dj_type == django_models.ForeignKey and field.name == 'm2m_fk':
+                self.assert_(pb_field.pb_type != self.m2m,
+                         "Assoc class field creates a circular relationship")
+            if dj_type == django_models.ForeignKey and field.name == 'simple_fk':
+                self.assert_(isinstance(pb_field.pb_type, ProtocolBuffer.Message),
+                         "recurse_fk was True but genMsg failed to recurse into fk type")
+            
+    def test_toProtoMsg(self):
+        dj_test = models.ManyToManyThroughTest()
+        dj_test.test_val = 1
+        dj_test.save()
+        assoc_test = models.M2MAssocTest()
+        assoc_test.assoc_test = 1
+        assoc_test.simple_fk = self.simple
+        assoc_test.m2m_fk = dj_test
+        assoc_test.save()
+        assoc_test2 = models.M2MAssocTest()
+        assoc_test2.assoc_test = 2
+        assoc_test2.simple_fk = self.simple
+        assoc_test2.m2m_fk = dj_test
+        assoc_test2.save()
+        pb_test = self.con.toProtoMsg(self.pb, dj_test, proto)
+        self.assert_(len(pb_test.m2m_test) == 2,
+                     "Added 2 objects to the relation but found %d" % len(pb_test.m2m_test))
+        self.assertEqual(pb_test.m2m_test[0],
+                         self.con.toProtoMsg(self.pb, assoc_test, proto),
+                         "Conversion of 1st assoc object doesn't match stand alone conversion of the same object")
+        self.assertEqual(pb_test.m2m_test[1],
+                         self.con.toProtoMsg(self.pb, assoc_test2, proto),
+                         "Conversion of 2nd assoc object doesn't match stand alone conversion of the same object")
+    
+
+class ManyToManyThrough_NoRecurse_TestCase(unittest.TestCase):
+    
+    def setUp(self):
+        self.module_name = "m2m_through_test_no_recurse"
+        self.pb = ProtocolBuffer(self.module_name)
+        self.m2m = genMsg('ManyToManyThroughTest',
+                                        models.ManyToManyThroughTest, recurse_fk=False)
+        self.pb.addMessage(self.m2m)
+        
+        self.django_class_fields = [field for field in 
+                               models.ManyToManyThroughTest._meta.local_fields +
+                               models.ManyToManyThroughTest._meta.many_to_many]
+        
+        self.django_assoc_class_fields = [field for field in 
+                               models.M2MAssocTest._meta.local_fields +
+                               models.M2MAssocTest._meta.many_to_many]
+        
+        self.pb_fields_by_name = dict([(f.name, f) for f in self.m2m.mapped_fields])
+        self.pb_assoc_fields_by_name = dict([(f.name, f) for f in self.pb_fields_by_name['m2m_test'].pb_type.mapped_fields])
+        mod_name = pbandj.genMod(self.pb)
+        global proto
+        proto = __import__(mod_name)
+        self.simple = models.Simple()
+        self.simple.val = 1234
+        self.simple.save()
+        self.con = Converter()
+        
+    def test_genMsg(self):
+        ''' Ensure that there is a type map definition for each Django field
+            type
+        '''
+        for field in self.django_class_fields:
+            self.assert_(DJ2PB.get(type(field)) != None,
+                         "No protocol buffer type mapped to %s Django type" % 
+                         type(field).__name__)
+        for field in self.django_assoc_class_fields:
+            self.assert_(DJ2PB.get(type(field)) != None,
+                         "No protocol buffer type mapped to %s Django type" % 
+                         type(field).__name__)
+    
+    def test_genMsg_fields_exist(self):
+        ''' Ensure that all fields from the django type exist in the generated
+            protocol buffer type and their type matches the type map
+        '''
+        for field in self.django_class_fields:
+            self.assert_(self.pb_fields_by_name.has_key(field.name),
+                         "Django field %s does not exist in protocol buffer message" % field.name)
+            pb_field = self.pb_fields_by_name[field.name]
+            dj_type = type(field)
+            expected_type = [DJ2PB[dj_type]]
+            if (dj_type == django_models.ForeignKey or dj_type == django_models.ManyToManyField):
+                expected_type.append(ProtocolBuffer.Message)
+            self.assert_(type(pb_field.pb_type) in expected_type,
+                         "Protocol Buffer field type %s does not match type %s specified in type map for Django type %s" %
+                         (type(pb_field.pb_type), DJ2PB[dj_type],
+                          dj_type.__name__))
+
+    
+    def test_genMsg_through_fields_exist(self):
+        for field in self.django_assoc_class_fields:
+            self.assert_(self.pb_assoc_fields_by_name.has_key(field.name),
+                         "Django field %s does not exist in protocol buffer message for through relation" % field.name)
+            pb_field = self.pb_assoc_fields_by_name[field.name]
+            dj_type = type(field)
+            expected_type = [DJ2PB[dj_type]]
+            if dj_type == django_models.ForeignKey or dj_type == django_models.ManyToManyField:
+                expected_type.append(ProtocolBuffer.Message)
+            self.assert_(type(pb_field.pb_type) in expected_type,
+                         "Protocol Buffer field type %s does not match type %s specified in type map for Django type %s" %
+                         (type(pb_field.pb_type), DJ2PB[dj_type],
+                          dj_type.__name__))
+            if dj_type == django_models.ForeignKey and field.name == 'm2m_fk':
+                self.assert_(pb_field.pb_type != self.m2m,
+                         "Assoc class field creates a circular relationship")
+            if dj_type == django_models.ForeignKey and field.name == 'simple_fk':
+                self.assert_(not isinstance(pb_field.pb_type, ProtocolBuffer.Message),
+                         "Recursive relationship found when recurse_fk was False")
+            
     def test_toProtoMsg(self):
         dj_test = models.ManyToManyThroughTest()
         dj_test.test_val = 1
@@ -588,8 +720,9 @@ if __name__ == '__main__':
     suite.addTest(unittest.makeSuite(ServiceTestCase))
     suite.addTest(unittest.makeSuite(ForeignKeyTestCase))
     suite.addTest(unittest.makeSuite(ForeignKeyRecursionTestCase))
-    #suite.addTest(unittest.makeSuite(ManyToManyTestCase))
-    suite.addTest(unittest.makeSuite(ManyToManyThroughTestCase))
+    suite.addTest(unittest.makeSuite(ManyToManyTestCase))
+    suite.addTest(unittest.makeSuite(ManyToManyThrough_Recurse_TestCase))
+    suite.addTest(unittest.makeSuite(ManyToManyThrough_NoRecurse_TestCase))
     unittest.TextTestRunner(verbosity=0).run(suite)
                 
         

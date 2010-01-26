@@ -23,3 +23,8 @@ Authors: Zach Walker (zwalker@lcogt.net)
 Dec 2009
 '''
 
+# Point django settings to dummy settings if not have already been set
+import os
+if not os.environ.has_key('DJANGO_SETTINGS_MODULE'):
+    print "WARNING: Using dummy django settings"
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'pbandj.dummy_settings'

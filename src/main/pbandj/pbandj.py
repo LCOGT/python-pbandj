@@ -33,7 +33,7 @@ def _genProto(proto, path="."):
     f.close()
 
 def genProto(proto, path="."):
-    if proto != DJANGO_PROTO:
+    if proto != DJANGO_PROTO and not(DJANGO_PROTO in proto.imports):
         proto.imports.append(DJANGO_PROTO)
     protos = (DJANGO_PROTO, proto)
     for proto in protos:

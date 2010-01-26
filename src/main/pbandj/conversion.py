@@ -24,6 +24,7 @@ Dec 2009
 
 import decimal
 from datetime import datetime, time
+import traceback
 
 from model import ProtocolBuffer
 from django.db import models
@@ -144,7 +145,7 @@ class Converter(object):
                           lambda val, kwargs: val.pk
                           
         conv_helpers[(types.PB_TYPE_INT32, models.ForeignKey)] = \
-                          lambda val, kwargs: kwargs['output_type'].related.parent_model.objects.get(pk=val)
+                          lambda val, kwargs: kwargs['output_type'].related.parent_model.objects.get(pk=val).pk
                           
         conv_helpers[(models.ForeignKey, ProtocolBuffer.Message)] = \
                           lambda val, kwargs: self.toProtoMsg(kwargs['pb'], val, kwargs['module'])
@@ -187,7 +188,7 @@ class Converter(object):
         '''
         self.helpers[(input_type, output_type)] = helper
 
-    def convert(self, input_type, output_type, val, kwargs):
+    def convert(self, input_type, output_type, val, **kwargs):
         '''Convert the input object to the output type and return an object of
            output type.  If there is not an existing mapping and conversion 
            helper between the type(input_obj) and output_type the input_obj
@@ -256,8 +257,9 @@ class Converter(object):
                         mapped_field = mapped_fields[field.name]
                         dj_val = self.convert(mapped_field.pb_type,
                                               mapped_field.dj_type,
-                                              val, {'pb': pb})
-                        dj_obj.__setattr__(field.name, dj_val)
+                                              val, pb=pb)
+                        # For a foreign key, we set 'field_id' to the pk of the related value 
+                        setattr(dj_obj, mapped_field.name, dj_val)
             return dj_obj
     
     
@@ -272,6 +274,7 @@ class Converter(object):
             Accepted Args:
             pb -- ProtocolBuffer object defining the relation 
             obj -- (django Model) The object to be converted
+            module -- protocol buffer module generate from .proto file modeled by pb
             dest_obj -- (Message) An instance of the message class
                         that is related to the django object arg.
                         Instead of creating a new object this obj
@@ -281,7 +284,9 @@ class Converter(object):
         dj_type = type(obj)
         # Try to get the type using the django class name
         message = pb.messages.get(dj_type)
-        msg_type = module.__dict__[message.name]
+        msg_type = getattr(module, message.name, None)
+        if msg_type == None:
+            raise Exception("No mapping available for django type %s." % dj_type)
         
             
         if dest_obj is None:
@@ -298,33 +303,48 @@ class Converter(object):
                     # Get the association model
                     assoc_model = field.dj_type.rel.through_model
                     # Access it through the parent type member names 'modelclass_set'
-                    val_list = obj.__getattribute__(assoc_model.__name__.lower() + '_set').all()
+                    val_list = getattr(obj, assoc_model.__name__.lower() + '_set').all()
                 else:
                     # No through model use the related objects directly
-                    val_list = obj.__getattribute__(field.name).all()
-                rep_field = protoMsg.__getattribute__(field.name)
+                    val_list = getattr(obj, field.dj_type.name).all()
+                rep_field = getattr(protoMsg, field.name)
                 
                 # Iterate thorugh and convert each value independantly
                 for val in val_list:
-                    pb_val = self.convert(field.dj_type,
+                    try:
+                        pb_val = self.convert(field.dj_type,
                                           field.pb_type,
-                                          val, {'pb': pb, 'module':module})
+                                          val, pb=pb, module=module)
+                    except Exception, e:
+                        #print field.name, field.dj_type, field.pb_type
+                        #traceback.print_exc()
+                        raise e
                     if isinstance(field.pb_type, ProtocolBuffer.Message):
                         rep_field.add().CopyFrom(pb_val)
                     else:
                         rep_field.append(pb_val)
             else:
-                val = obj.__getattribute__(field.name)
+                try:
+                    val = getattr(obj, field.dj_type.name)
+                except Exception, e:
+                    #print message.name, type(obj), field.name, type(field.dj_type.name), field.dj_type.name, field.dj_type, field.pb_type
+                    #traceback.print_exc()
+                    raise e
                 if  val != None and val != "":
                     # TODO: Check if field is repeated and if so get all objects
                     # that need to be converted
                     pb_val = self.convert(field.dj_type,
                                           field.pb_type,
-                                          val, {'pb': pb, 'module':module})
+                                          val, pb=pb, module=module)
                     # Use CopyFrom if it field is a composite type
                     if isinstance(field.pb_type, ProtocolBuffer.Message):
-                        protoMsg.__getattribute__(field.name).CopyFrom(pb_val)
+                        getattr(protoMsg, field.name).CopyFrom(pb_val)
                     else:
                         # print field.name
-                        protoMsg.__setattr__(field.name, pb_val)
+                        try:
+                            setattr(protoMsg, field.name, pb_val)
+                        except Exception, e:
+                            #print field.name, field.dj_type, field.pb_type, val, val.pk, val.fk_test,  pb_val
+                            #traceback.print_exc()
+                            raise e
         return protoMsg

@@ -116,7 +116,7 @@ DJANGO_PROTO = _buildDjangoProto()
 
 # TODO: Add a recursion depth limit
 # TODO: Prevent circular recursion        
-def genMsg(msg_name, django_model_class, include=[], exclude=[], recurse_fk=False):
+def genMsg(msg_name, django_model_class, include=[], exclude=[], recurse_fk=True, no_recurse=[]):
     """ Create a protocol buffer message from a django type.
         By default all args will be included in the new message.
         If recurse_fk is set messages will also be created for foreign key
@@ -131,6 +131,8 @@ def genMsg(msg_name, django_model_class, include=[], exclude=[], recurse_fk=Fals
                   model.  Only used if included arg is []
         recurse_fk -- Flag for recursing into foreign key fields if true or 
                    using pk if false
+        no-recurse -- List of field names which should not be recursed.
+                      Only used if recurse_fk=True
     """
     Field = ProtocolBuffer.Field
     Enum = ProtocolBuffer.Enumeration
@@ -146,8 +148,10 @@ def genMsg(msg_name, django_model_class, include=[], exclude=[], recurse_fk=Fals
     
     # Iterate through Django fields and init dict that allows
     # lookup of fields by name.
-    [django_field_by_name.__setitem__(field.name, field) for field in
-        django_class_fields]
+    for field in django_class_fields:
+        django_field_by_name[field.name] = field
+    #[django_field_by_name.__setitem__(field.name, field) for field in
+    #    django_class_fields]
     
     # Remove excluded fields or add included fields
     field_set = set()
@@ -161,50 +165,62 @@ def genMsg(msg_name, django_model_class, include=[], exclude=[], recurse_fk=Fals
         field_set = useable_field_names
     
     # Add a pb field to the pb msg for each django field in the set
+    new_fields = []
     for field_name in field_set:
         field = django_field_by_name[field_name]
-        pb_usage = Field.OPTIONAL
-        pb_type = None
+        #pb_usage = Field.OPTIONAL
+        #pb_type = None
+        #pb_field_name = field.name
         if isinstance(field, models.ForeignKey):
-            if recurse_fk:
+            if recurse_fk and not field.name in no_recurse:
                 # Create a new msg type from the parent table in the fk relation
                 fk_dj_model = field.rel.to
                 if isinstance(fk_dj_model, str):
                     # TODO: Handle ForeignKey supplied as a str
-                    print fk_dj_model
+                    #print fk_dj_model
                     assert False
                     #fk_dj_model = models.__dict__[fk_dj_model]
                 pb_type = genMsg(fk_dj_model.__name__, fk_dj_model, recurse_fk=recurse_fk)
+                new_fields.append(Field(Field.OPTIONAL, field.name,
+                                        pb_type, field))
                 # TODO: Change msg name to avoid name collision at the ProtocolBuffer level
-            else:
+            #else:
                 # Use the pk from the foreign key relation as the value
-                pb_type = DJ2PB.get(type(field))()
+            pb_type = DJ2PB.get(type(field))()
+            new_fields.append(Field(Field.OPTIONAL, field.name + '_id',
+                                    pb_type, field))
         elif isinstance(field, models.ManyToManyField):
             # If there is a 'through' model, add a repeated field for the through
             # data even if recurse_fk == False. If there is no through model and
             # recrse_fk == False then add repeated reference to fk object pk's.
-            #print "ManyToMany"
-            pb_usage = Field.REPEATED
+            #pb_usage = Field.REPEATED
             if not field.rel.through is None:
                 # There is data associated with the relation
                 # Generate a msg from assoc model excluding fk reference
                 # back to the parent type to prevent circular references
                 m2m_dj_model = field.rel.through_model
-                exc_fields = [] # Excluded fields
+                recur_rel_fields = [] # Fields which would cause a recursive relation
                 for assoc_field in m2m_dj_model._meta._fields():
                     if (isinstance(assoc_field, models.ForeignKey) and
                         assoc_field.rel.to == django_model_class):
-                        exc_fields.append(assoc_field.name)
-                pb_type = genMsg(m2m_dj_model.__name__, m2m_dj_model, exclude=exc_fields, recurse_fk=recurse_fk)
+                        recur_rel_fields.append(assoc_field.name)
+                pb_type = genMsg(m2m_dj_model.__name__, m2m_dj_model, recurse_fk=recurse_fk, no_recurse=recur_rel_fields)
+                new_fields.append(Field(Field.REPEATED, field.name,
+                                        pb_type, field))
                 # TODO: Change msg name to avoid name collision at the ProtocolBuffer level
             else:
                 # No data associated with the relation
                 # Just like a foreign key but repeated
-                if recurse_fk:
+                if recurse_fk and not field.name in no_recurse:
                     m2m_dj_model = field.rel.to
                     pb_type = genMsg(m2m_dj_model.__name__, m2m_dj_model, recurse_fk=recurse_fk)
-                else:
-                    pb_type = DJ2PB.get(type(field))()
+                    new_fields.append(Field(Field.REPEATED, field.name,
+                                            pb_type, field))
+                #else:
+                    #pb_field_name += '_id'
+                pb_type = DJ2PB.get(type(field))()
+                new_fields.append(Field(Field.REPEATED, field.name + '_id',
+                                        pb_type, field))
             #print field.rel.to, field.rel.through             
         else: # Not a Foreign Key
             # Add an enumeration for each django field with choices set
@@ -218,8 +234,10 @@ def genMsg(msg_name, django_model_class, include=[], exclude=[], recurse_fk=Fals
                     pb_type = DJ2PB.get(type(field))
                 else:
                     pb_type = DJ2PB.get(type(field))()
-        
-        pb_field = Field(pb_usage, field.name, pb_type, field)
-        root_msg.addField(pb_field)
+            new_fields.append(Field(Field.OPTIONAL, field.name,
+                                    pb_type, field))
+        #pb_field = Field(pb_usage, pb_field_name, pb_type, field)
+        #root_msg.addField(pb_field)
+    root_msg.addField(*new_fields)
     return root_msg
 
