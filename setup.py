@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     setup(
         name = "pbandj",
-        version = "1.1.0",
+        version = "1.1.1",
         packages = ['pbandj'],
         package_dir = {'':'src/main'},
         install_requires = ['Django>=1.0.2-final','protobuf>=%s' % PROTOBUF_VERSION,'protobuf_socket_rpc>=1.3.1'],

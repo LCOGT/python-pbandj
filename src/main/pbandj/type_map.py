@@ -225,7 +225,8 @@ def genMsg(msg_name, django_model_class, include=[], exclude=[], recurse_fk=True
         else: # Not a Foreign Key
             # Add an enumeration for each django field with choices set
             if(field.choices):
-                field_enum = Enum(field_name, [a for a,b in field.choices])
+                field_enum = Enum(field_name, [a for a,b in field.choices],
+                                  "Generated from 'choices' for django model field: %s.%s" % (django_model_class.__name__, field.name))
                 root_msg.enums.append(field_enum)
                 pb_type = field_enum
             else:

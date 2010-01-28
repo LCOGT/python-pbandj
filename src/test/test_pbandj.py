@@ -253,11 +253,13 @@ class ServiceTestCase(unittest.TestCase):
             done.run(request)
         
         def SimpleHandler2(service_impl, controller, request, done):
+            '''Docstring from Handler2'''
             request.val += 5
             done.run(request)
             
         self.pb.addRpc('SimpleService', 'TestRpc', simple_msg,
-                                   simple_msg, SimpleHandler)
+                                   simple_msg, SimpleHandler,
+                                   'A line of documentation')
         self.pb.addRpc('SimpleService', 'TestRpc2', simple_msg,
                                    simple_msg, SimpleHandler2)
         self.pb.addRpc('SimpleService2', 'TestRpc', simple_msg,

@@ -42,7 +42,7 @@ class ProtocolBuffer(object):
     
     class Enumeration(object):
         
-        def __init__(self, name, values=None):
+        def __init__(self, name, values=None, doc=None):
             '''Create an Enumeration object with given name and list of values
             to be enumerated
             '''
@@ -69,6 +69,7 @@ class ProtocolBuffer(object):
                     pair[0] = name
                 self.name2val = dict(name2val)
                 self.dj2val = dict(dj2val)
+                self.doc = doc
         
         def __eq__(self, other):
             if not isinstance(other, self.__class__):
@@ -89,10 +90,14 @@ class ProtocolBuffer(object):
             return hash(self.name) ^ hash(tuple(self.name2val.items())) ^ hash(tuple(self.dj2val.items()))
         
         def __str__(self):
-            proto = 'enum %s {\n' % self.name
+            if self.doc is None:
+                proto = ''
+            else:
+                proto = "// %s\n" % str(self.doc).strip()
+            proto += 'enum %s {\n' % self.name
             for key in self.name2val:
                 if(type(key) == str):
-                    proto += '%s = %d;\n' % (key, self.name2val[key])
+                    proto += '\t%s = %d;\n' % (key, self.name2val[key])
             proto += '}\n\n'
             return proto
              
@@ -241,27 +246,62 @@ class ProtocolBuffer(object):
                 else:
                     self.mapped_fields.append(field)
 
-            
+        @staticmethod
+        def _write_proto_field(field, field_num):
+            field_str = ''
+            if type(field.pb_type) == ProtocolBuffer.Message:
+                field_type = field.pb_type.name
+            elif type(field.pb_type) == ProtocolBuffer.Enumeration:
+                field_type = field.pb_type.name
+            else:
+                field_type = field.pb_type.ptype
+            field_str = field_str + "\t%s %s %s = %d;\n"
+            field_str %= (field.usage,
+                        field_type,
+                        field.name, field_num)
+            return field_str
+        
         def __str__(self):
             """ Produces a .proto file message declaration
             """
-            fields = self.fields + self.mapped_fields + self.message_fields
-            field_base = 1
-            message =   "message " + self.name + " {\n"
+            #fields = self.fields + self.mapped_fields + self.message_fields
+            #field_base = 1
+            field_num = 1
+            if self.django_model_class != None:
+                message = "// Generated from Django model %s\n" % self.django_model_class.__name__
+            else:
+                message = ""
+            message +=   "message " + self.name + " {\n"
             for enum in self.enums:
-                message += str(enum)
-            for i in range(len(fields)):
-                field = fields[i]
-                if type(field.pb_type) == ProtocolBuffer.Message:
-                    field_type = field.pb_type.name
-                elif type(field.pb_type) == ProtocolBuffer.Enumeration:
-                    field_type = field.pb_type.name
-                else:
-                    field_type = field.pb_type.ptype
-                message = message + "    %s %s %s = %d;\n"
-                message %= (field.usage,
-                            field_type,
-                            field.name, i + field_base)
+                enum_str = str(enum)
+                for line in enum_str.splitlines():
+                    message += "\t%s\n" % line
+                #message += str(enum)
+#            for i in range(len(fields)):
+#                field = fields[i]
+#                if type(field.pb_type) == ProtocolBuffer.Message:
+#                    field_type = field.pb_type.name
+#                elif type(field.pb_type) == ProtocolBuffer.Enumeration:
+#                    field_type = field.pb_type.name
+#                else:
+#                    field_type = field.pb_type.ptype
+#                message = message + "    %s %s %s = %d;\n"
+#                message %= (field.usage,
+#                            field_type,
+#                            field.name, i + field_base)
+            if len(self.mapped_fields) > 0:# and not self.django_model_class is None: 
+                message += "\t// Fields mapped to django model %s\n" % self.django_model_class.__name__ 
+                for field in self.mapped_fields:
+                    message += ProtocolBuffer.Message._write_proto_field(field, field_num)
+                    field_num += 1
+            if (len(self.message_fields) + len(self.fields)) > 0:
+                message += "\t// Unmapped fields\n"
+                for field in self.message_fields:
+                    message += ProtocolBuffer.Message._write_proto_field(field, field_num)
+                    field_num += 1
+                for field in self.fields:
+                    message += ProtocolBuffer.Message._write_proto_field(field, field_num)
+                    field_num += 1
             message = message + "}\n"
             return message
         
@@ -322,7 +362,7 @@ class ProtocolBuffer(object):
         
         
         def addRPCMethod(self, rpc_method_name, in_msg_type,
-                     out_msg_type, rpc_handler):
+                     out_msg_type, rpc_handler, doc=None):
             """ Generate a Protocol Buffer RPC
                 rpc_method_name -- (String) Name of the rpc method being
                                    created within the service
@@ -340,7 +380,8 @@ class ProtocolBuffer(object):
             rpc = ProtocolBuffer.RPCMethod(rpc_method_name,
                                        in_msg_type,
                                        out_msg_type,
-                                       rpc_handler)
+                                       rpc_handler,
+                                       doc)
             self.methods.append(rpc)
             
         def start(self, module, port, daemon=False):
@@ -357,7 +398,7 @@ class ProtocolBuffer(object):
             RPC declaration 
         """
         
-        def __init__(self, name, in_msg_type, out_msg_type, callable):
+        def __init__(self, name, in_msg_type, out_msg_type, callable, doc=None):
             """
                 Accepted Arguments:
                 name -- (String) The name of the RPC method
@@ -375,6 +416,10 @@ class ProtocolBuffer(object):
             self.in_msg_type  = in_msg_type
             self.out_msg_type = out_msg_type
             self.handler      = callable
+            if doc is None or len(doc) == 0:
+                self.doc = callable.__doc__
+            else:
+                self.doc          = doc
         
     
     
@@ -460,20 +505,18 @@ class ProtocolBuffer(object):
             
     
     
-    def addRpc(self, service_name, method_name, in_msg, out_msg, handler):
-        ''' Create a new service with service_name that will be available
-            on the specified port.  If the service already exists, the 
-            existing service will be returned otherwise a new service
-            will be returned.  Exception will be thrown a service by the
-            same name is on a different port or if a service with a 
-            different name is already using the requested port
+    def addRpc(self, service_name, method_name, in_msg, out_msg, handler, doc=None):
+        ''' Add a new method to the specified service or create the service
+        if it doesn't already exist.  Service will take imput type in_msg
+        and return type out_msg.  The optional doc argument will be inserted
+        in the genreated .proto file along with the service declaration.
         '''
         service = self.services.get(service_name)
         if service:
-            service.addRPCMethod(method_name, in_msg, out_msg, handler)
+            service.addRPCMethod(method_name, in_msg, out_msg, handler, doc)
         else:
             service = ProtocolBuffer.Service(service_name)
-            service.addRPCMethod(method_name, in_msg, out_msg, handler)
+            service.addRPCMethod(method_name, in_msg, out_msg, handler, doc)
             self.services[service_name] = service
     
     
@@ -481,7 +524,7 @@ class ProtocolBuffer(object):
         """ Produce a .proto file string for this Protocol Buffer
             instance
         """
-        out= ""
+        out= "//Protocol Buffer file generated by pbandj.\n\n"
         imported_msgs = []
         for proto in self.imports:
             imported_msgs += proto.messages.values()
@@ -489,13 +532,18 @@ class ProtocolBuffer(object):
                 out += 'import "%s";\n' % proto.proto_filename()
             else:
                 out += 'import "%s";\n' % proto
+        if len(self.imports) > 0:
+            out += "\n"
         for key in self.services.keys():
             service = self.services[key]
             out += "service " + service.name + " {\n"
             for method in service.methods:
-                out += "    rpc " + method.name + " (" + \
+                if isinstance(method.doc, str) and len(method.doc) > 0:
+                    for doc_line in method.doc.strip().splitlines():
+                        out += "\t// %s\n" % doc_line.strip()
+                out += "\trpc " + method.name + " (" + \
                        method.in_msg_type.name + ") returns (" + \
-                       method.out_msg_type.name + ");\n"
+                       method.out_msg_type.name + ");\n\n"
             out += "}\n" 
         
         #print imported_msgs
@@ -503,7 +551,7 @@ class ProtocolBuffer(object):
         for key in self.messages.keys():
             if isinstance(key,str):
                 if not self.messages[key] in imported_msgs:
-                    out += self.messages[key].__str__()
+                    out += "%s\n" % str(self.messages[key])
             
         return out
         
