@@ -423,7 +423,7 @@ class ProtocolBuffer(object):
         
     
     
-    def __init__(self, module_name='generated'):
+    def __init__(self, module_name='generated', package=''):
         """
             AcceptedArguments:
             module_name -- (String) The name of the python module that
@@ -434,6 +434,7 @@ class ProtocolBuffer(object):
         self.messages    = {}
         self.services    = {}
         self.enum        = {}
+        self.package     = package
         
     
     def python_mod_name(self):
@@ -534,6 +535,8 @@ class ProtocolBuffer(object):
                 out += 'import "%s";\n' % proto
         if len(self.imports) > 0:
             out += "\n"
+        if self.package:
+            out += "package " + self.package + ";\n"
         for key in self.services.keys():
             service = self.services[key]
             out += "service " + service.name + " {\n"

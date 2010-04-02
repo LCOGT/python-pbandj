@@ -104,7 +104,7 @@ def _buildDJ2PB():
     return map
 
 def _buildDjangoProto():
-    pb = ProtocolBuffer('django_types')
+    pb = ProtocolBuffer('django_types', 'org.lcogt.protobuf')
     pb.addMessage(Date())
     pb.addMessage(Time())
     #pb.addMessage(_buildFile())
