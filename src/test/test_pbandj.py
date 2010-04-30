@@ -27,6 +27,9 @@ from datetime import datetime
 from django.conf import ENVIRONMENT_VARIABLE
 os.environ[ENVIRONMENT_VARIABLE] = 'django_test.settings'
 
+from pbandj.pbandj import genMod, DJANGO_PROTO
+genMod(DJANGO_PROTO)
+
 from django.db import models as django_models
 from pbandj.model import ProtocolBuffer
 from pbandj.type_map import DJ2PB, genMsg

@@ -536,7 +536,7 @@ class ProtocolBuffer(object):
         if len(self.imports) > 0:
             out += "\n"
         if self.package:
-            out += "package " + self.package + ";\n"
+            out += "option java_package = \"" + self.package + "\";\n"
         for key in self.services.keys():
             service = self.services[key]
             out += "service " + service.name + " {\n"

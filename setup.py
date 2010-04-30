@@ -26,7 +26,7 @@ from setuptools import setup, find_packages
 import pbinstaller
 
 
-PROTOBUF_VERSION = '2.2.0'
+PROTOBUF_VERSION = '2.3.0'
 
 
 if __name__ == '__main__':
@@ -34,10 +34,10 @@ if __name__ == '__main__':
 
     setup(
         name = "pbandj",
-        version = "1.1.2",
+        version = "1.1.3",
         packages = ['pbandj'],
         package_dir = {'':'src/main'},
-        install_requires = ['Django>=1.0.2-final','protobuf>=%s' % PROTOBUF_VERSION,'protobuf_socket_rpc>=1.3.1'],
+        install_requires = ['Django>=1.0.2-final','protobuf==%s' % PROTOBUF_VERSION,'protobuf_socket_rpc>=1.3.1'],
         author = "Zachary Walker",
         author_email = "zwalker@lcogt.net",
         description = "Utility for creating Protocol Buffer Messages and RPC services from a Django model",)
