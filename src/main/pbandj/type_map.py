@@ -193,12 +193,14 @@ def genMsg(msg_name, django_model_class, include=[], exclude=[], recurse_fk=True
             # If there is a 'through' model, add a repeated field for the through
             # data even if recurse_fk == False. If there is no through model and
             # recrse_fk == False then add repeated reference to fk object pk's.
-            #pb_usage = Field.REPEATED
-            if not field.rel.through is None:
+            # If there are only 3 fields than there is only an id and a fk to each
+            # side of the relation so this is probably not a user defined assoc class
+            if (not field.rel.through is None and
+                len(field.rel.through._meta.fields) > 3):
                 # There is data associated with the relation
                 # Generate a msg from assoc model excluding fk reference
                 # back to the parent type to prevent circular references
-                m2m_dj_model = field.rel.through_model
+                m2m_dj_model = field.rel.through
                 recur_rel_fields = [] # Fields which would cause a recursive relation
                 for assoc_field in m2m_dj_model._meta._fields():
                     if (isinstance(assoc_field, models.ForeignKey) and

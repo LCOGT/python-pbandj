@@ -197,6 +197,18 @@ class OneOfEverythingUsageTestCase(unittest.TestCase):
         self.ooe.id = dj_obj.id
         self.assertEqual(self.ooe, pb_from_db)
         
+    def test_char_field_truncation(self):
+        ''' Test truncation of char field '''
+        self.ooe.char_test = "ABC123456789"
+        dj_obj = self.converter.toDjangoObj(self.pb, self.ooe)
+        dj_obj.save()
+        pb_from_db = self.converter.toProtoMsg(self.pb,
+                                          type(dj_obj).objects.get(pk=dj_obj.id),
+                                          proto)
+        self.ooe.id = dj_obj.id
+        self.ooe.char_test = self.ooe.char_test[0:10]
+        self.assertEqual(self.ooe, pb_from_db)
+        
 class EnumTestCase(unittest.TestCase):
     proto = None
     def setUp(self):
@@ -239,6 +251,7 @@ class EnumTestCase(unittest.TestCase):
                                           proto)
         self.emsg.id = dj_obj.id
         self.assertEqual(self.emsg, pb_from_db)
+
         
 class ServiceTestCase(unittest.TestCase):
     
@@ -564,9 +577,18 @@ class ManyToManyThrough_Recurse_TestCase(unittest.TestCase):
     
     def test_genMsg_through_fields_exist(self):
         for field in self.django_assoc_class_fields:
-            self.assert_(self.pb_assoc_fields_by_name.has_key(field.name),
+            if isinstance(field, django_models.ForeignKey):
+                self.assert_(self.pb_assoc_fields_by_name.has_key(field.name + '_id'),
+                         "Django field %s does not exist in protocol buffer message for through relation" % field.name + '_id')
+                if field.name != 'm2m_fk':
+                    self.assert_(self.pb_assoc_fields_by_name.has_key(field.name),
                          "Django field %s does not exist in protocol buffer message for through relation" % field.name)
-            pb_field = self.pb_assoc_fields_by_name[field.name]
+                    pb_field = self.pb_assoc_fields_by_name[field.name]
+                else:
+                    pb_field = self.pb_assoc_fields_by_name[field.name + '_id']
+            else:
+                pb_field = self.pb_assoc_fields_by_name[field.name]
+
             dj_type = type(field)
             expected_type = [DJ2PB[dj_type]]
             if dj_type == django_models.ForeignKey or dj_type == django_models.ManyToManyField:
@@ -579,6 +601,7 @@ class ManyToManyThrough_Recurse_TestCase(unittest.TestCase):
                 self.assert_(pb_field.pb_type != self.m2m,
                          "Assoc class field creates a circular relationship")
             if dj_type == django_models.ForeignKey and field.name == 'simple_fk':
+                #print pb_field.pb_type
                 self.assert_(isinstance(pb_field.pb_type, ProtocolBuffer.Message),
                          "recurse_fk was True but genMsg failed to recurse into fk type")
             
@@ -666,10 +689,16 @@ class ManyToManyThrough_NoRecurse_TestCase(unittest.TestCase):
 
     
     def test_genMsg_through_fields_exist(self):
+        #print self.pb_assoc_fields_by_name
         for field in self.django_assoc_class_fields:
-            self.assert_(self.pb_assoc_fields_by_name.has_key(field.name),
+            if isinstance(field, django_models.ForeignKey):
+                self.assert_(self.pb_assoc_fields_by_name.has_key(field.name + '_id'),
                          "Django field %s does not exist in protocol buffer message for through relation" % field.name)
-            pb_field = self.pb_assoc_fields_by_name[field.name]
+                pb_field = self.pb_assoc_fields_by_name[field.name + '_id']
+            else:
+                self.assert_(self.pb_assoc_fields_by_name.has_key(field.name),
+                         "Django field %s does not exist in protocol buffer message for through relation" % field.name)
+                pb_field = self.pb_assoc_fields_by_name[field.name]
             dj_type = type(field)
             expected_type = [DJ2PB[dj_type]]
             if dj_type == django_models.ForeignKey or dj_type == django_models.ManyToManyField:

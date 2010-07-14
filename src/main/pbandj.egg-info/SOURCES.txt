@@ -16,7 +16,6 @@ src/example/addressbook/models.py
 src/example/addressbook/views.py
 src/main/pbandj/__init__.py
 src/main/pbandj/conversion.py
-src/main/pbandj/django_types_pb2.py
 src/main/pbandj/dummy_settings.py
 src/main/pbandj/model.py
 src/main/pbandj/pbandj.py

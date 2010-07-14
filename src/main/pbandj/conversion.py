@@ -105,28 +105,40 @@ class Converter(object):
     def __init__(self):
         #TODO: Change django type portion of key to type rather than string
         conv_helpers = {}
+        
         #Django seems to require float values input as a string
         conv_helpers[(types.PB_TYPE_DOUBLE,
                        models.DecimalField)] = lambda val, kwargs : str(val)
+        
         #Convert Decimal back to a python float which is the same as a double
         #in protocol buffers apparently
         conv_helpers[(models.DecimalField,
                      types.PB_TYPE_DOUBLE)] = lambda val, kwargs : decimal.Decimal(val).__float__()
+        
         #Help convert a Django DateTimeField into a consistent string format
         #for transport
         conv_helpers[(models.DateTimeField,
                       types.PB_TYPE_STRING)] = lambda val, kwargs : val.strftime("%Y-%m-%d %H:%M:%S")
+        
         #Help convert a Django DateField into a consistent string format for transport
         conv_helpers[(models.DateField,
                       types.PB_TYPE_STRING)] = lambda val, kwargs : val.strftime("%Y-%m-%d")
+        
         #Help convert a string into a Django DateTimeField
         conv_helpers[(types.PB_TYPE_STRING,
                       models.DateTimeField)] = \
                           lambda val, kwargs : datetime.strptime(val, "%Y-%m-%d %H:%M:%S")
+        
         #Help convert a string into a  Django DateField
         conv_helpers[(types.PB_TYPE_STRING,
                       models.DateField)] = \
                           lambda val, kwargs : datetime.strptime(val, "%Y-%m-%d")
+        
+        #Help convert a string into a  Django CharField by truncating input that is too long.
+        conv_helpers[(types.PB_TYPE_STRING,
+                      models.CharField)] = \
+                          lambda val, kwargs : val[0:kwargs['output_type'].max_length]
+
         conv_helpers[(models.FileField,
                       types.PB_TYPE_STRING)] = \
                           lambda val, kwargs : val.name
@@ -150,15 +162,20 @@ class Converter(object):
         conv_helpers[(models.ForeignKey, ProtocolBuffer.Message)] = \
                           lambda val, kwargs: self.toProtoMsg(kwargs['pb'], val, kwargs['module'])
                           #self.convert(kwargs['input_type'], kwargs['output_type'], val)
+        
         conv_helpers[(ProtocolBuffer.Message, models.ForeignKey)] = \
                           lambda val, kwargs: self.toDjangoObj(kwargs['pb'], val)
                           #lambda val, kwargs: self.convert(kwargs['input_type'], kwargs['output_type'], val)
+        
         conv_helpers[(models.ManyToManyField, types.PB_TYPE_INT32)] = \
                           lambda val, kwargs : val.pk
+        
         conv_helpers[(types.PB_TYPE_INT32, models.ManyToManyField)] = \
                           lambda val, kwargs : _m2m_pb2dj(val, kwargs)
+        
         conv_helpers[(models.ManyToManyField, ProtocolBuffer.Message)] = \
                           lambda val, kwargs : self.toProtoMsg(kwargs['pb'], val, kwargs['module'])
+        
         conv_helpers[(ProtocolBuffer.Message, models.ManyToManyField)] = \
                           lambda val, kwargs : val
         
@@ -294,19 +311,19 @@ class Converter(object):
         else:
             protoMsg = dest_obj
         
-        # Get the pb message type and convert the django message    
+        # Get the pb message type and convert the django message 
         for field in message.mapped_fields:
             if field.usage == ProtocolBuffer.Field.REPEATED:
                 # Must be a ManyToMany type relation
                 val_list = []
-                if not field.dj_type.rel.through is None:
-                    # Get the association model
-                    assoc_model = field.dj_type.rel.through_model
-                    # Access it through the parent type member names 'modelclass_set'
-                    val_list = getattr(obj, assoc_model.__name__.lower() + '_set').all()
+                # If there are only 3 fields than it there is only an id and a fk to each
+                # side of the relation so this is probably not a user defined assoc class
+                if(not field.dj_type.rel.through is None and 
+                    len(field.dj_type.rel.through._meta.fields) > 3):
+                    val_list = getattr(obj, field.dj_type.rel.through.__name__.lower() + '_set').all()
                 else:
                     # No through model use the related objects directly
-                    val_list = getattr(obj, field.dj_type.name).all()
+                    val_list = getattr(obj, field.name[:-3] if field.name.endswith('_id') else field.name).all()
                 rep_field = getattr(protoMsg, field.name)
                 
                 # Iterate thorugh and convert each value independantly
