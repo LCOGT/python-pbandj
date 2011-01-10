@@ -284,8 +284,12 @@ class ServiceTestCase(unittest.TestCase):
         global proto
         proto = __import__(mod_name)
         if not ServiceTestCase.services_started:
-            self.pb.services['SimpleService'].start(proto, self.service_port, True)
-            self.pb.services['SimpleService2'].start(proto, self.service_port + 1, True)
+            sThread = ProtocolBuffer.ServiceThread(proto, self.service_port, True,
+                                                    self.pb.services['SimpleService'],
+                                                    self.pb.services['SimpleService2'])
+            #self.pb.services['SimpleService'].start(proto, self.service_port, True)
+            #self.pb.services['SimpleService2'].start(proto, self.service_port + 1, True)
+            sThread.start()
             ServiceTestCase.services_started = True
 
         
@@ -313,7 +317,7 @@ class ServiceTestCase(unittest.TestCase):
     def test_n_services(self):
         client1 = RpcService(proto.SimpleService_Stub, self.service_port,
                             "localhost")
-        client2 = RpcService(proto.SimpleService2_Stub, self.service_port + 1,
+        client2 = RpcService(proto.SimpleService2_Stub, self.service_port,
                             "localhost")
         test_msg = proto.Simple()
         test_msg.val = 1

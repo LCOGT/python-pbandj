@@ -312,43 +312,6 @@ class ProtocolBuffer(object):
             service
         """
         
-        class ServiceThread(threading.Thread):
-            
-            def __init__(self, module, service, port):
-                threading.Thread.__init__(self)
-                self.module = module
-                self.service = service
-                self.port = port
-                
-#            def _createHandler(self, func):
-#                def handler(service_impl, controller, request, done):
-#                    try:
-#                        result = func(request)
-#                    except Exception, e:
-#                        controller.handleError(e, e.__str__())
-#                    done.run(result)
-                
-            def run(self):
-                """ Start service thread """
-                # Create a server instance
-                server = SocketRpcServer(self.port,host='')
-                service_class = self.module.__dict__[self.service.name]
-                handlers = {}
-                
-                # Link each method to its handler
-                for method in self.service.methods:
-                    #handlers[method.name] = self._createHandler(method.handler)
-                    handlers[method.name] = method.handler
-                
-                # Extend Service class and add handlers    
-                newservice = type(self.service.name + "Impl",
-                                  (service_class,), handlers)
-                server.registerService(newservice())
-                
-                # Start the server
-                server.run();
-        
-        
         def __init__(self, name):
             """
                 Accepted Arguments:
@@ -384,14 +347,55 @@ class ProtocolBuffer(object):
                                        doc)
             self.methods.append(rpc)
             
-        def start(self, module, port, daemon=False):
-            """ Start service in a new thread """
-            thread = ProtocolBuffer.Service.ServiceThread(module, self, port)
-            thread.setDaemon(daemon)
-            thread.start()
+#        def start(self, module, port, daemon=False):
+#            """ Start service in a new thread """
+#            thread = ProtocolBuffer.ServiceThread(module, self, port)
+#            thread.setDaemon(daemon)
+#            thread.start()
+#            
+    
+    
+    class ServiceThread(threading.Thread):
             
-    
-    
+        def __init__(self, module, port, daemon=False, *services):
+            threading.Thread.__init__(self)
+            self.module = module
+            self.services = []
+            for service in services:
+                if isinstance(service, ProtocolBuffer.Service):
+                    self.services.append(service)
+            self.port = port
+            self.setDaemon(daemon)
+            
+#            def _createHandler(self, func):
+#                def handler(service_impl, controller, request, done):
+#                    try:
+#                        result = func(request)
+#                    except Exception, e:
+#                        controller.handleError(e, e.__str__())
+#                    done.run(result)
+            
+        def run(self):
+            """ Start service thread """
+            # Create a server instance
+            server = SocketRpcServer(self.port,host='')
+            for service in self.services:
+                service_class = self.module.__dict__[service.name]
+                handlers = {}
+                
+                # Link each method to its handler
+                for method in service.methods:
+                    #handlers[method.name] = self._createHandler(method.handler)
+                    handlers[method.name] = method.handler
+                
+                # Extend Service class and add handlers
+                newservice = type(service.name + "Impl",
+                              (service_class,), handlers)
+                server.registerService(newservice())
+            
+            # Start the server
+            server.run();
+  
     
     class RPCMethod(object):
         """ A class encapsulation the description of a Protocol Buffer
