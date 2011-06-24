@@ -36,7 +36,7 @@ from pbandj.type_map import DJ2PB, genMsg
 from pbandj.conversion import Converter
 from pbandj import pbandj
 from django_test.test_app import models
-from protobuf import RpcService
+from protobuf.socketrpc import RpcService
 
 
 class MessageRenameTestCase(unittest.TestCase):
