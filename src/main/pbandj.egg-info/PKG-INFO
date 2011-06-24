@@ -1,6 +1,6 @@
 Metadata-Version: 1.0
 Name: pbandj
-Version: 1.2.0
+Version: 1.3.0
 Summary: Utility for creating Protocol Buffer Messages and RPC services from a Django model
 Home-page: UNKNOWN
 Author: Zachary Walker
