@@ -27,7 +27,7 @@ from datetime import date, datetime
 from socket import gethostname
 
 # Third party imports
-from protobuf.socketrpc.server import SocketRpcServer
+from protobuf.server import SocketRpcServer
 
 # Module imports
 
@@ -159,7 +159,10 @@ class ProtocolBuffer(object):
             buffer and django objects
         """
         
-        def __init__(self, msg_name, django_model_class=None):
+        MAPPED_FIELD_START = 0
+        UNMAPPED_FIELD_START = 32768
+        
+        def __init__(self, msg_name, django_model_class=None, field_number_map={}):
             """
                 Accepted Arguments:
                 msg_name -- (String) Name of this protocol
@@ -176,6 +179,10 @@ class ProtocolBuffer(object):
             self.message_fields     = []
             self.enums              = []
             self.__iadd__           = None
+            
+            # A mapping of (field_name, field_type) tuples to a field number
+            # to be used in the declaration 
+            self.field_number_map = field_number_map
         
         def __eq__(self, other):
             if not isinstance(other, self.__class__):
@@ -264,16 +271,23 @@ class ProtocolBuffer(object):
         def __str__(self):
             """ Produces a .proto file message declaration
             """
-            #fields = self.fields + self.mapped_fields + self.message_fields
-            #field_base = 1
-            field_num = 1
+            # Start field numbers at the max of the existing field numbers
+            mapped_field_num = 1 + max([x for x in self.field_number_map.values() if x < self.UNMAPPED_FIELD_START] + 
+                                   [self.MAPPED_FIELD_START])
+            unmapped_field_num = 1 + max([x for x in self.field_number_map.values() if x >= self.UNMAPPED_FIELD_START]
+                                          + [self.UNMAPPED_FIELD_START])
+            
+            # Document source of generated message    
             if self.django_model_class != None:
                 message = "// Generated from Django model %s\n" % self.django_model_class.__name__
             else:
                 message = ""
+            
+            # Build message    
             message +=   "message " + self.name + " {\n"
             for enum in self.enums:
                 enum_str = str(enum)
+                # TODO make sure enums maintain the same order
                 for line in enum_str.splitlines():
                     message += "\t%s\n" % line
                 #message += str(enum)
@@ -292,16 +306,28 @@ class ProtocolBuffer(object):
             if len(self.mapped_fields) > 0:# and not self.django_model_class is None: 
                 message += "\t// Fields mapped to django model %s\n" % self.django_model_class.__name__ 
                 for field in self.mapped_fields:
-                    message += ProtocolBuffer.Message._write_proto_field(field, field_num)
-                    field_num += 1
+                    field_key = (field.name, field.pb_type.name)
+                    if self.field_number_map.has_key(field_key):
+                        message += ProtocolBuffer.Message._write_proto_field(field, self.field_number_map[field_key])
+                    else:
+                        message += ProtocolBuffer.Message._write_proto_field(field, mapped_field_num)
+                        mapped_field_num += 1
             if (len(self.message_fields) + len(self.fields)) > 0:
                 message += "\t// Unmapped fields\n"
                 for field in self.message_fields:
-                    message += ProtocolBuffer.Message._write_proto_field(field, field_num)
-                    field_num += 1
+                    field_key = (field.name, field.pb_type.name)
+                    if self.field_number_map.has_key(field_key):
+                        message += ProtocolBuffer.Message._write_proto_field(field, self.field_number_map[field_key])
+                    else:
+                        message += ProtocolBuffer.Message._write_proto_field(field, unmapped_field_num)
+                        unmapped_field_num += 1
                 for field in self.fields:
-                    message += ProtocolBuffer.Message._write_proto_field(field, field_num)
-                    field_num += 1
+                    field_key = (field.name, field.pb_type.name)
+                    if self.field_number_map.has_key(field_key):
+                        message += ProtocolBuffer.Message._write_proto_field(field, self.field_number_map[field_key])
+                    else:
+                        message += ProtocolBuffer.Message._write_proto_field(field, unmapped_field_num)
+                        unmapped_field_num += 1
             message = message + "}\n"
             return message
         
@@ -535,8 +561,8 @@ class ProtocolBuffer(object):
         out += "option java_generic_services = true;\n\n"
         imported_msgs = []
         for proto in self.imports:
-            imported_msgs += proto.messages.values()
             if type(proto) is ProtocolBuffer:
+                imported_msgs += proto.messages.values()
                 out += 'import "%s";\n' % proto.proto_filename()
             else:
                 out += 'import "%s";\n' % proto

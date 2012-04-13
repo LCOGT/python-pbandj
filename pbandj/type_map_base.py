@@ -24,44 +24,32 @@ Dec 2009
 from django.db import  models
 
 
-def _make_type(name, ptype):
+def _make_type(name, ptype, pnum):
     return type(name, (), {'name': name,
                            'ptype': ptype,
+                           'pnum' : pnum,
                            '__eq__': lambda x,y: isinstance(y, x.__class__) and x.ptype == y.ptype,
                            '__ne__': lambda x,y: not x.__eq__(y)})
 
-PB_TYPE_STRING  = _make_type('PB_TYPE_STRING', 'string')
-PB_TYPE_DOUBLE  = _make_type('PB_TYPE_DOUBLE','double')
-PB_TYPE_INT32   = _make_type('PB_TYPE_INT32','int32')
-PB_TYPE_INT64   = _make_type('PB_TYPE_INT64','int64')
-PB_TYPE_UINT32  = _make_type('PB_TYPE_UINT32','uint32')
-PB_TYPE_UINT64  = _make_type('PB_TYPE_UINT64','uint64')
-PB_TYPE_SINT32  = _make_type('PB_TYPE_SINT32','sint32')
-PB_TYPE_SINT64  = _make_type('PB_TYPE_SINT64','sint64')
-PB_TYPE_FINT32  = _make_type('PB_TYPE_FINT32','fixed32')
-PB_TYPE_FINT64  = _make_type('PB_TYPE_FINT64','fixed64')
-PB_TYPE_SFINT32 = _make_type('PB_TYPE_SFINT32','sfixed32')
-PB_TYPE_SFINT64 = _make_type('PB_TYPE_SFINT64','sfixed64')
-PB_TYPE_FLOAT   = _make_type('PB_TYPE_FLOAT','float')
-PB_TYPE_BOOL    = _make_type('PB_TYPE_BOOL','bool')
-PB_TYPE_BYTES   = _make_type('PB_TYPE_BYTES','bytes')
 
-
-#PB_TYPE_STRING  = type('PB_TYPE_STRING', (), {'ptype': 'string'})
-#PB_TYPE_DOUBLE  = type('PB_TYPE_DOUBLE', (), {'ptype': 'double'})
-#PB_TYPE_INT32   = type('PB_TYPE_INT32', (), {'ptype': 'int32'})
-#PB_TYPE_INT64   = type('PB_TYPE_INT64', (), {'ptype': 'int64'})
-#PB_TYPE_UINT32  = type('PB_TYPE_UINT32', (), {'ptype': 'uint32'})
-#PB_TYPE_UINT64  = type('PB_TYPE_UINT64', (), {'ptype': 'uint64'})
-#PB_TYPE_SINT32  = type('PB_TYPE_SINT32', (), {'ptype': 'sint32'})
-#PB_TYPE_SINT64  = type('PB_TYPE_SINT64', (), {'ptype': 'sint64'})
-#PB_TYPE_FINT32  = type('PB_TYPE_FINT32', (), {'ptype': 'fixed32'})
-#PB_TYPE_FINT64  = type('PB_TYPE_FINT64', (), {'ptype': 'fixed64'})
-#PB_TYPE_SFINT32 = type('PB_TYPE_SFINT32', (), {'ptype': 'sfixed32'})
-#PB_TYPE_SFINT64 = type('PB_TYPE_SFINT64', (), {'ptype': 'sfixed64'})
-#PB_TYPE_FLOAT   = type('PB_TYPE_FLOAT', (), {'ptype': 'float'})
-#PB_TYPE_BOOL    = type('PB_TYPE_BOOL', (), {'ptype': 'bool'})
-#PB_TYPE_BYTES   = type('PB_TYPE_BYTES', (), {'ptype': 'bytes'})
+PB_TYPE_DOUBLE   = _make_type('TYPE_DOUBLE','double', 1)
+PB_TYPE_FLOAT    = _make_type('TYPE_FLOAT','float', 2)
+PB_TYPE_INT64    = _make_type('TYPE_INT64','int64', 3)
+PB_TYPE_UINT64   = _make_type('TYPE_UINT64','uint64', 4)
+PB_TYPE_INT32    = _make_type('TYPE_INT32','int32', 5)
+PB_TYPE_FIXED64  = _make_type('TYPE_FIXED64','fixed64', 6)
+PB_TYPE_FIXED32  = _make_type('TYPE_FIXED32','fixed32', 7)
+PB_TYPE_BOOL     = _make_type('TYPE_BOOL','bool', 8)
+PB_TYPE_STRING   = _make_type('TYPE_STRING', 'string', 9)
+PB_TYPE_GROUP    = _make_type('TYPE_GROUP', 'group', 10)
+PB_TYPE_MESSAGE  = _make_type('TYPE_MESSAGE', 'message', 11)
+PB_TYPE_BYTES    = _make_type('TYPE_BYTES','bytes', 12)
+PB_TYPE_UINT32   = _make_type('TYPE_UINT32','uint32', 13)
+PB_TYPE_ENUM     = _make_type('TYPE_ENUM', 'enum', 14)
+PB_TYPE_SFIXED32 = _make_type('TYPE_SFIXED32','sfixed32', 15)
+PB_TYPE_SFIXED64 = _make_type('TYPE_SFIXED64','sfixed64', 16)
+PB_TYPE_SINT32   = _make_type('TYPE_SINT32','sint32', 17)
+PB_TYPE_SINT64   = _make_type('TYPE_SINT64','sint64', 18)
 
 
 DJ2PB = {models.CharField: PB_TYPE_STRING,
@@ -85,11 +73,12 @@ DJ2PB = {models.CharField: PB_TYPE_STRING,
          models.TextField: PB_TYPE_STRING,
          models.TimeField: PB_TYPE_STRING,
          models.URLField: PB_TYPE_STRING,
-         models.XMLField: PB_TYPE_STRING,
+         #models.XMLField: PB_TYPE_STRING,
          models.AutoField: PB_TYPE_INT32,
          models.ForeignKey: PB_TYPE_INT32,
          # TODO: Add a ManyToManyField mapping
          models.ManyToManyField: PB_TYPE_INT32 
          }
+
 
 PB2DJ = dict([(DJ2PB[key], key) for key in DJ2PB])

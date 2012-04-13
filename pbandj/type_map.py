@@ -116,7 +116,7 @@ DJANGO_PROTO = _buildDjangoProto()
 
 # TODO: Add a recursion depth limit
 # TODO: Prevent circular recursion        
-def genMsg(msg_name, django_model_class, include=[], exclude=[], recurse_fk=True, no_recurse=[]):
+def genMsg(msg_name, django_model_class, include=[], exclude=[], recurse_fk=True, no_recurse=[], field_num_map={}):
     """ Create a protocol buffer message from a django type.
         By default all args will be included in the new message.
         If recurse_fk is set messages will also be created for foreign key
@@ -133,11 +133,13 @@ def genMsg(msg_name, django_model_class, include=[], exclude=[], recurse_fk=True
                    using pk if false
         no-recurse -- List of field names which should not be recursed.
                       Only used if recurse_fk=True
+        field_num_map -- (Dict) A map of field numbers to use in message generation
+                         ex: { (field, field_type) : int }
     """
     Field = ProtocolBuffer.Field
     Enum = ProtocolBuffer.Enumeration
     #messages = {}
-    root_msg = ProtocolBuffer.Message(msg_name, django_model_class)
+    root_msg = ProtocolBuffer.Message(msg_name, django_model_class, field_num_map)
     #messages[msg_name] = root_msg
     
     # Local fields
