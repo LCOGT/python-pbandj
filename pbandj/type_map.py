@@ -72,28 +72,6 @@ def Date():
         Date.instance = date
     return Date.instance
 
-#def _buildFile():
-#    try:
-#        _buildFile.file
-#    except:
-#        file = ProtocolBuffer.Message('File')
-#        file.addField(ProtocolBuffer.Field(ProtocolBuffer.Field.REQUIRED,
-#                                           'name',
-#                                           base.PB_TYPE_STRING))
-#        file.addField(ProtocolBuffer.Field(ProtocolBuffer.Field.REQUIRED,
-#                                           'path',
-#                                           base.PB_TYPE_STRING))
-#        file.addField(ProtocolBuffer.Field(ProtocolBuffer.Field.OPTIONAL,
-#                                           'data',
-#                                           base.PB_TYPE_BYTES))
-#        file.addField(ProtocolBuffer.Field(ProtocolBuffer.Field.OPTIONAL,
-#                                           'size',
-#                                           base.PB_TYPE_INT32))
-#        file.addField(ProtocolBuffer.Field(ProtocolBuffer.Field.OPTIONAL,
-#                                           'url',
-#                                           base.PB_TYPE_STRING))
-#        _buildFile.file = file
-#    return _buildFile.file
 
 def _buildDJ2PB():
     map = base.DJ2PB
