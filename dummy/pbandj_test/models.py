@@ -84,9 +84,44 @@ class ManyToManyThroughTest(models.Model):
     test_val = models.IntegerField()
     m2m_test = models.ManyToManyField(Simple, through='M2MAssocTest')
 
-
 #@protocol_buffer_message    
 class M2MAssocTest(models.Model):
     assoc_test = models.IntegerField()
     simple_fk = models.ForeignKey(Simple)
     m2m_fk = models.ForeignKey(ManyToManyThroughTest)
+
+# Test self referential foreign key reecursion
+@protocol_buffer_message
+class ForeignKeyRecursionTest(models.Model):
+    fkey_test = models.ForeignKey('ForeignKeyRecursionTest')
+    
+# Test recursion in Through models
+@protocol_buffer_message
+class ManyToManyThroughRecursionTest(models.Model):
+    test_val = models.IntegerField()
+    m2m_test = models.ManyToManyField(Simple, through='M2MAssocRecursionTest')
+
+
+#@protocol_buffer_message    
+class M2MAssocRecursionTest(models.Model):
+    assoc_test = models.IntegerField()
+    simple_fk = models.ForeignKey(Simple)
+    m2m_fk = models.ForeignKey(ManyToManyThroughRecursionTest)
+    
+# Convoluted recursion test
+@protocol_buffer_message
+class ConvolutedRecursionTest(models.Model):
+    test_val = models.IntegerField()
+    m2m_test = models.ManyToManyField(Simple, through='ConvolutedM2MAssocRecursionTest')
+
+# Test self referential foreign key reecursion
+@protocol_buffer_message
+class ConvolutedForeignKeyTest(models.Model):
+    fkey_test = models.ForeignKey(ConvolutedRecursionTest)
+    fkey_test2 = models.ForeignKey('ConvolutedForeignKeyTest')
+
+#@protocol_buffer_message    
+class ConvolutedM2MAssocRecursionTest(models.Model):
+    assoc_test = models.IntegerField()
+    simple_fk = models.ForeignKey(Simple)
+    m2m_fk = models.ForeignKey(ConvolutedForeignKeyTest)

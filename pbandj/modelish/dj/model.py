@@ -3,65 +3,86 @@ from django.db import models as dj_models
 from field import create_field
 
 
-
-def find_recursion(dj_model, max_depth=3):
+def find_circular_relationships(dj_model, max_depth=3, visited_models=None):
     """Decend relational references defined in the model fields and look for 
-    recursive relationships.
+    circular relationships.  Any relationship over max_depth deep will be 
+    treated as circular.
     
     Args:
     max_depth - (int) Maximum number of levels to decend before aborting search
     """
-    # Local fields
+    # Initialize accumulator
+    if not visited_models:
+        visited_models = []
+    
+    # See if this model has already been visited on recursion check
+    if dj_model in visited_models:
+        return dj_model
+    else: 
+        visited_models.append(dj_model)
+        
+    # Create list of all fields in model
     fields = [field for field in 
                             dj_model._meta.local_fields +
                             dj_model._meta.many_to_many]
     
-    if max_depth <= 0:
-        return fields
-    
-    results = []
+    recursion_path = []
     for field in fields:
-        field_recursion = None        
-        if isinstance(field, dj_models.ForeignKey):
-            field_recursion = find_recursion(field, max_depth - 1)
-        elif isinstance(field. dj_models.ManyToManyField):
-            if (not field.rel.through is None and
-                len(field.rel.through._meta.fields) > 3):
-                # There is data associated with the relation
-                # Generate a Model instance from assoc model excluding fk reference
-                # back to the parent type to prevent circular references
-                field_recursion = find_recursion(field.rel_through, max_depth - 1)
-            else:
-                field_recursion = find_recursion(m2m_dj_field, max_depth -1)
-        if field_recursion:
-            results.append(field_recursion)
-    return results
+        if max_depth <= 0:
+            recursion_path.append((field, None))
+        else:
+            next_dj_model = None        
+            if isinstance(field, dj_models.ForeignKey):
+                next_dj_model = field.rel.to
+            elif isinstance(field, dj_models.ManyToManyField):
+                if (not field.rel.through is None and
+                    len(field.rel.through._meta.fields) > 3):
+                    # There is data associated with the relation
+                    # Generate a Model instance from assoc model excluding fk reference
+                    # back to the parent type to prevent circular references
+                    next_dj_model = field.rel.through
+                else:
+                    next_dj_model = field.rel.to   
+            if next_dj_model:
+                circles = find_circular_relationships(next_dj_model, max_depth - 1, visited_models)
+                if circles:
+                    recursion_path.append((field, circles))
+#                recursion_path.append((field, next_dj_model))
+    return recursion_path
+
 
 class Model(object):
     """Class mapping to a django model
     """
 
     @staticmethod
-    def from_django_model(dj_model, **kwargs):
+    def from_django_model(dj_model, no_follow_fields=None, no_follow_models=None, **kwargs):
         """Create a model instance from a supplied django model
         """
         """ Create a protocol buffer message from a django type.
             By default all args will be included in the new message.
-            If recurse_fk is set messages will also be created for foreign key
+            If follow_related is set messages will also be created for foreign key
             types.  A list of generated messages will be returned.
             Accepted Args:
-            msg_name -- (String) The name of the message
-            dj_model -- (Type) A reference to the django
+            msg_name - (str) The name of the message
+            dj_model - (Type) A reference to the django
                                   model type
             include - (List) A list of field names from the model to
                       be included in the mapping
             exclude - (List) A list of field names to exclude from the
                       model.  Only used if included arg is []
-            recurse_fk -- Flag for recursing into foreign key fields if true or 
+            follow_related - (bool)Follow into relation fields if true or 
                        using pk if false
-            no-recurse - List of field names which should not be recursed.
-                          Only used if recurse_fk=True
+            no_follow_fields - (List) Field names which should not be followed.
+                          Only used if follow_related=True
+            no_follow_models - (List) Django models not to follow as relations
         """
+        
+        # Make sure this model isn't processed again after the first pass
+        if no_follow_models is None:
+            no_follow_models = [dj_model]
+        else:
+            no_follow_models.append(dj_model)
         
         # Local fields
         django_class_fields = [field for field in 
@@ -77,8 +98,8 @@ class Model(object):
         field_set = set()
         
         # Remove excluded fields or add included fields
-        include = kwargs.get(include, [])
-        exclude = kwargs.get(exclude, [])
+        include = kwargs.get('include', [])
+        exclude = kwargs.get('exclude', [])
         if include != []: 
             # Assert that the fields all exist
             include_set = set(include)
@@ -89,15 +110,17 @@ class Model(object):
             field_set = useable_field_names
         
         # Instantiate pbandj model
-        model = Model()
-        
+        model = Model(dj_model._meta.module_name)
         # Add a field for each remaining django field in the set
         for field_name in field_set:
             field = django_field_by_name[field_name]
-            model.fields.append(create_field(field, **kwargs))
+            model.fields.append(create_field(field, no_follow_models=no_follow_models, **kwargs))
+            
             
         return model
         
     
-    def __init__(self):
-        self.fields = [] 
+    def __init__(self, name=None, fields=None):
+        self.name = name
+        self.fields = fields if fields else []
+             
