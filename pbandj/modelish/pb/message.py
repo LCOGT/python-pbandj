@@ -65,7 +65,13 @@ class Message(object):
 #        return new_msg
         
         
-    def add_field_group(self, field_group, group_doc=None, *field):
+    def all_fields(self):
+        """Get a flatened list of all fields
+        """
+        return reduce(lambda x,y : x + y, [group.fields for group in self.fields.values])
+    
+    
+    def add_field_group(self, field_group, *field, **kwargs):
         """ Add a field to this Protocol Buffer message
         
             Args:
@@ -77,7 +83,7 @@ class Message(object):
                      the message
         """
         dest_group = self.fields[field_group] =  {
-                                                  'doc' : group_doc,
+                                                  'doc' : kwargs.get('group_doc', None),
                                                   'fields' : field
                                                  }
     
@@ -122,10 +128,12 @@ class Message(object):
         # Fields
         for group_name, field_group in self.fields.items():
             doc = field_group.get('doc')
-            if doc and field_group.get('fields'):
-                message += "\t// %s\n" % doc
+            if field_group.get('fields'):
+                if doc and doc.strip() != '':
+                    message += "\t// %s\n" % doc
                 for field in field_group['fields']:
                     message += "\t%s\n" % field
+                message += "\n"
         
         # Close Message
         message = message + "}\n"

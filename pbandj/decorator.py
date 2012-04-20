@@ -1,36 +1,8 @@
-#!/usr/bin/python
-# Copyright (C) 2009  Las Cumbres Observatory <lcogt.net>
-# 
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-# 
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-# 
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-'''pbandj.py - Functions for generating .proto files and
-pyhton modules.
+from modelish import mapper
+from google.protobuf import descriptor_pb2
 
-Authors: Zach Walker (zwalker@lcogt.net)
-Dec 2009
-'''
+_PB_INTERNAL_TYPE_MAP = descriptor_pb2._FIELDDESCRIPTORPROTO.enum_types_by_name['Type'].values_by_number
 
-import functools
-from os import system
-
-from google import protobuf
-
-import type_map_base as types
-from type_map import genMsg, DJANGO_PROTO
-from model import ProtocolBuffer
-
-#_PB_INTERNAL_TYPE_MAP = protobuf.descriptor_pb2._FIELDDESCRIPTORPROTO.enum_types_by_name['Type'].values_by_number
 
 def __msg_name_to_descriptor_name(msg_name):
     ''' Convert a protocol buffer message name to the expected descriptor name
@@ -43,7 +15,8 @@ def __get_msg_descriptor(pb_mod, msg_name):
     ''' Get the message descriptor for a named message from the supplied module
     '''
     return getattr(pb_mod, __msg_name_to_descriptor_name(msg_name))
-    
+
+
 # When called with no args and no (), the decorator is called with the
 # type or function being decorated as first arg.
 # See http://stackoverflow.com/questions/653368/how-to-create-a-python-decorator-that-can-be-used-either-with-or-without-paramet
@@ -76,9 +49,10 @@ def protocol_buffer_message(*args, **kwargs):
                 kwargs['field_num_map'] = field_num_map
             # TODO remove need to pass msg_name as non kwarg
             if kwargs.has_key('msg_name'):
-                return genMsg(django_model_class=model, **kwargs)
+                return mapper.MappedModel(model, **kwargs)
             else:
-                return genMsg(django_model_class=model, msg_name=model.__name__, **kwargs)
+                return mapper.MappedModel(model, **kwargs)
+                #return genMsg(django_model_class=model, msg_name=model.__name__, **kwargs)
 #            return genMsg(msg_name, model_class, include, exclude, recurse_fk, no_recurse)
         
         model.generate_protocol_buffer = staticmethod(generate_protocol_buffer)
@@ -90,8 +64,9 @@ def protocol_buffer_message(*args, **kwargs):
         return wrap(model)
     else:
         return wrap
-        
-def add_field(field):
+    
+    
+def add_field(usage, name, pb_type, num=None):
     ''' Decorator for adding an umapped field to a protocol buffer message
     generated from a django model
     '''
@@ -111,9 +86,9 @@ def add_field(field):
             A pbandj.model.ProtocolBuffer.Message object
             '''
             
-            msg = builder(**pbargs)
-            msg.addField(field)
-            return msg
+            mapped_model = builder(**pbargs)
+            mapped_model.add_unmapped_field(usage, name, pb_type)
+            return mapped_model
         
         model.generate_protocol_buffer = staticmethod(generate_protocol_buffer)
         return model
@@ -138,36 +113,3 @@ def service(service_name, service_method_name, input_type, output_type):
         service_entry.append(service_method)
         return f    
     return wrap
-        
-
-def _genProto(proto, path="."):
-    f = open(path + "/" + proto.proto_filename(), 'w')
-    f.write(proto.__str__())
-    f.close()
-
-def genProto(proto, path="."):
-    if proto != DJANGO_PROTO and not(DJANGO_PROTO in proto.imports):
-        proto.imports.append(DJANGO_PROTO)
-    protos = (DJANGO_PROTO, proto)
-    for proto in protos:
-        _genProto(proto, path)
-
-
-def genMod(proto, path="."):
-    """ Generate a python module for this Protocol Buffer.
-        The default name is genereated_pb2.py unless specified.
-        Accepted Arguments:
-        path -- (String) The path, relative or fully qualified,
-                to the directory where the generated module will
-                be created
-    """
-    genProto(proto, path)
-    modules = proto.imports + [proto]
-    for mod in modules:
-        if type(mod) is ProtocolBuffer:
-            mod = mod.proto_filename()
-        system("protoc --python_out=" + path +
-               " --proto_path=" + path + " " +
-               path + "/" + mod)
-               
-    return proto.module_name + "_pb2"

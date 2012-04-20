@@ -1,26 +1,3 @@
-#!/usr/bin/python
-# Copyright (C) 2009  Las Cumbres Observatory <lcogt.net>
-# 
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-# 
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-# 
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-'''type_map_base.py - Type mapping definitions for Django fields to
-protocol buffer fields
-
-Authors: Zach Walker (zwalker@lcogt.net)
-Dec 2009
-'''
-
 from django.db import  models
 
 
@@ -50,8 +27,6 @@ PB_TYPE_SFIXED32 = _make_type('TYPE_SFIXED32','sfixed32',15)
 PB_TYPE_SFIXED64 = _make_type('TYPE_SFIXED64','sfixed64',16)
 PB_TYPE_SINT32   = _make_type('TYPE_SINT32'  ,'sint32'  ,17)
 PB_TYPE_SINT64   = _make_type('TYPE_SINT64'  ,'sint64'  ,18)
-
-PB_TYPE_MESSAGE  = _make_type('TYPE_MESSAGE' ,'message', 19) # wrong number?
 
 
 DJ2PB = {models.CharField: PB_TYPE_STRING,

@@ -1,6 +1,6 @@
 from django.db import models as dj_models
 
-from field import create_field
+import field
 
 
 def find_circular_relationships(dj_model, max_depth=3, visited_models=None):
@@ -49,6 +49,20 @@ def find_circular_relationships(dj_model, max_depth=3, visited_models=None):
                     recursion_path.append((field, circles))
 #                recursion_path.append((field, next_dj_model))
     return recursion_path
+
+
+def create_field(dj_field, **kwargs):
+    """Factory method for creating Field instance based on Django type
+    
+    Args:
+    dj_field - (django field) - a django model field instance
+    """
+    if isinstance(dj_field, dj_models.ForeignKey):
+        return field.ForeignKey.from_dj_field(dj_field, **kwargs)
+    elif isinstance(dj_field, dj_models.ManyToManyField):
+        return field.ManyToMany.from_dj_field(dj_field, **kwargs)
+    else:
+        return field.Field.from_dj_field(dj_field, **kwargs)
 
 
 class Model(object):

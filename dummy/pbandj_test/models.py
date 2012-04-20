@@ -22,14 +22,14 @@ Dec 2009
 '''
 
 from django.db import models
-from pbandj.pbandj import protocol_buffer_message, add_field
-from pbandj.model import ProtocolBuffer
-from pbandj import type_map_base as types
+from pbandj.decorator import protocol_buffer_message, add_field
+from pbandj.modelish.pb import field
+
 
 
 #@protocol_buffer_message(field_num_map={('file_test', 'TYPE_STRING') : 1980})
-@add_field(ProtocolBuffer.Field(ProtocolBuffer.Field.OPTIONAL, 'zanotherfield', types.PB_TYPE_INT32))
-@add_field(ProtocolBuffer.Field(ProtocolBuffer.Field.OPTIONAL, 'zfield', types.PB_TYPE_STRING))
+@add_field('optional', 'zanotherfield', 'int32')
+@add_field('optional', 'zfield', 'string')
 @protocol_buffer_message
 class OneOfEverything(models.Model):
     bool_test = models.BooleanField()
@@ -84,7 +84,7 @@ class ManyToManyThroughTest(models.Model):
     test_val = models.IntegerField()
     m2m_test = models.ManyToManyField(Simple, through='M2MAssocTest')
 
-#@protocol_buffer_message    
+@protocol_buffer_message    
 class M2MAssocTest(models.Model):
     assoc_test = models.IntegerField()
     simple_fk = models.ForeignKey(Simple)
@@ -102,7 +102,7 @@ class ManyToManyThroughRecursionTest(models.Model):
     m2m_test = models.ManyToManyField(Simple, through='M2MAssocRecursionTest')
 
 
-#@protocol_buffer_message    
+@protocol_buffer_message    
 class M2MAssocRecursionTest(models.Model):
     assoc_test = models.IntegerField()
     simple_fk = models.ForeignKey(Simple)
@@ -120,8 +120,9 @@ class ConvolutedForeignKeyTest(models.Model):
     fkey_test = models.ForeignKey(ConvolutedRecursionTest)
     fkey_test2 = models.ForeignKey('ConvolutedForeignKeyTest')
 
-#@protocol_buffer_message    
+@protocol_buffer_message    
 class ConvolutedM2MAssocRecursionTest(models.Model):
     assoc_test = models.IntegerField()
     simple_fk = models.ForeignKey(Simple)
-    m2m_fk = models.ForeignKey(ConvolutedForeignKeyTest)
+    m2m_fk = models.ForeignKey(ConvolutedRecursionTest)
+    m2m_assoc_fk = models.ForeignKey(ConvolutedForeignKeyTest)

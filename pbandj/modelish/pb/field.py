@@ -1,3 +1,6 @@
+from message import Message
+from enum import Enum
+
 
 OPTIONAL = "optional"
 REQUIRED = "required"
@@ -41,9 +44,14 @@ class Field(object):
         return not self.__eq__(other)
     
     def __str__(self):
-        return '%s %s %s = %d;\n' % (self.usage, self.pb_type, self.name, self.field_num)
+        if isinstance(self.pb_type, Message):
+            return '%s %s %s = %d;' % (self.usage, self.pb_type.name, self.name, self.field_num)
+        elif isinstance(self.pb_type, Enum):
+            return '%s %s %s = %d;' % (self.usage, self.pb_type.name, self.name, self.field_num)
+        else:
+            return '%s %s %s = %d;' % (self.usage, self.pb_type, self.name, self.field_num)
     
     # Hacked hash.  Fields aren't immutable as implemented.
     # Be careful using hash
     def __hash__(self):
-        return hash(self.name) ^ hash(self.usage) ^ hash(self.pb_type) ^ hase(self.field_num)
+        return hash(self.name) ^ hash(self.pb_type)

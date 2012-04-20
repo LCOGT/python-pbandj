@@ -1,21 +1,6 @@
 from django.db import models as dj_models
 
-from model import Model, find_recursion
-
-
-def create_field(dj_field, **kwargs):
-    """Factory method for creating Field instance based on Django type
-    
-    Args:
-    dj_field - (django field) - a django model field instance
-    """
-    if isinstance(dj_field, dj_models.ForeignKey):
-        return ForeignKey.from_dj_field(dj_field, **kwargs)
-    elif isinstance(dj_field, dj_models.ManyToManyField):
-        return ManyToMany.from_dj_field(dj_field, **kwargs)
-    else:
-        return Field.from_dj_field(dj_field, **kwargs)
-        
+from model import Model      
 
 
 class Field(object):
@@ -30,7 +15,7 @@ class Field(object):
         field = Field(dj_field.name, type(dj_field))
                         # Add an enumeration for each django field with choices set
         if(dj_field.choices):
-            self.choices = field.choices
+            field.choices = dj_field.choices
         return field
         
 
@@ -73,7 +58,7 @@ class ManyToMany(Field):
     
     def __init__(self, name, dj_type):
         Field.__init__(self, name, dj_type)
-        self.through = None
+#        self.through = None
         
     @staticmethod
     def from_dj_field(dj_field, **kwargs): 
@@ -101,7 +86,7 @@ class ManyToMany(Field):
                 len(dj_field.rel.through._meta.fields) > 3):
                 # There is data associated with the relation
                 if follow_related and not dj_field.rel.through in no_follow_models:
-                    field.through = Model.from_django_model(dj_field.rel.through, **kwargs) 
+                    field.dj_type = Model.from_django_model(dj_field.rel.through, **kwargs) 
 
             # NOTE THE SIDE EFFECT OF CALLING Model.from_django_model ON
             # THROUGH MODEL IS THAT THE TO MODEL GETS ADDED TO no_follow_models

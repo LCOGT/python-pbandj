@@ -11,8 +11,7 @@ from django.core.management.base import BaseCommand
 from django.conf import settings
 from django.db import models
 
-from pbandj import pbandj
-from pbandj.model import ProtocolBuffer
+from pbandj.modelish import mapper
 
 
 class Command(BaseCommand):
@@ -61,11 +60,15 @@ class Command(BaseCommand):
             else:
                 print "Don't understand pb2 value %s" % pb2_path
                 sys.exit(1)
-        pb = ProtocolBuffer(app)
-        app_msgs = [model.generate_protocol_buffer(old_pb2_mod=pb2_mod) for model in model_list if hasattr(model, '__PBANDJ')]
-        for msg in app_msgs:
-            pb.addMessage(msg)
-        mod_name = pbandj.genMod(pb)
+#        pb = ProtocolBuffer(app)
+        mapped_module = mapper.MappedModule(app)
+        mapped_modles = [model.generate_protocol_buffer(old_pb2_mod=pb2_mod) for model in model_list if hasattr(model, '__PBANDJ')]
+        for mapped_model in mapped_modles:
+#            pb.addMessage(msg)
+            mapped_module.add_mapped_model(mapped_model)
+        proto = mapped_module.generate_proto()
+        print proto
+#        mod_name = pbandj.genMod(pb)
         
 
 

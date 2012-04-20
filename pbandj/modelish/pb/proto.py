@@ -96,7 +96,7 @@ class Proto(object):
         
         # Messages
         for msg_name, msg in self.messages.items():
-            out += str(msg)
+            out += str(msg) + "\n"
         
         # Services
         for service_name, service in self.services.items():
