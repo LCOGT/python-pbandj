@@ -1,5 +1,5 @@
 
-from pbandj.pbandj import service
+from pbandj.decorator import service, service_import
 import models
 
 
@@ -16,6 +16,12 @@ def SimpleHandler2(service_impl, controller, request, done):
             
             
 @service('SimplerService', 'simplyGet', models.Simple, models.Simple)
-def SimpleHandler2(service_impl, controller, request, done):
+def SimpleHandler3(service_impl, controller, request, done):
             request.val += 1
-            done.run(request)             
+            done.run(request)
+
+@service_import("another.proto")            
+@service('EvenSimplerService', 'getEven', 'SomethingIn', 'SomethingOut')
+def SimpleHandler24(service_impl, controller, request, done):
+            request.val += 1
+            done.run(request)                           

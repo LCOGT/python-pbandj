@@ -11,9 +11,10 @@ from django.core.management.base import BaseCommand
 from django.conf import settings
 from django.db import models
 
-from pbandj import pbandj
-from pbandj.model import ProtocolBuffer
-
+from pbandj.modelish import mapper
+from pbandj.modelish.pb import proto, service
+from pbandj.decorator import service_registry
+from pbandj import util
 
 PBANDJ_SERVICE_MODULES = getattr(settings, 'PBANDJ_SERVICE_MODULES', {})
 PBANDJ_SERVICE_MODULE = 'pbandj.handlers'
@@ -47,13 +48,32 @@ class Command(BaseCommand):
             print e
             return
         
-        pb = ProtocolBuffer(app + '_' + 'services')
-        pb.imports.append(app + '.proto')
-        for service_name, methods in pbandj.service_registry.items():
-            for service_method in methods:
-                pb.addRpc(service_name, service_method['method'], service_method['input'].generate_protocol_buffer(), service_method['output'].generate_protocol_buffer(), service_method['handler'])
-        
-        mod_name = pbandj.genMod(pb)
+#        pb = proto.Proto(app + '_' + 'services')
+#        pb.imports.append(app + '.proto')
+        mapped_module = mapper.MappedModule(app + '_' + 'services')
+        mapped_module.add_import(app + '.proto')
+        for xtra_import in service_registry.proto_imports:
+            mapped_module.add_import(xtra_import)
+        for service_name, handlers in service_registry.services.items():
+            pb_service = service.Service(service_name)
+            for handler in handlers:
+                meta = handler._pbandj
+                service_in = meta.input
+                if isinstance(service_in, type) and models.Model in service_in.__bases__: 
+                    service_in = service_in.generate_protocol_buffer().pb_msg.name
+                service_out = meta.output
+                if isinstance(service_out, type) and models.Model in service_out.__bases__: 
+                    service_out = service_out.generate_protocol_buffer().pb_msg.name
+                pb_service.add_rpc(meta.method_name,
+                                   service_in,
+                                   service_out)
+            mapped_module.add_service(pb_service)
+#            pb.add_service(pb_service)
+#        print pb
+        proto = mapped_module.generate_proto()
+        print proto
+        util.generate_pb2_module(mapped_module)
+#        util.write_proto_file(pb)
         
         
 

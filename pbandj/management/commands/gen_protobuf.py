@@ -12,6 +12,7 @@ from django.conf import settings
 from django.db import models
 
 from pbandj.modelish import mapper
+from pbandj import util
 
 
 class Command(BaseCommand):
@@ -66,8 +67,10 @@ class Command(BaseCommand):
         for mapped_model in mapped_modles:
 #            pb.addMessage(msg)
             mapped_module.add_mapped_model(mapped_model)
+        
         proto = mapped_module.generate_proto()
         print proto
+        util.generate_pb2_module(mapped_module)
 #        mod_name = pbandj.genMod(pb)
         
 

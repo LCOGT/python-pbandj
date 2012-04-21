@@ -1,5 +1,8 @@
-from modelish import mapper
+from django.db import models
 from google.protobuf import descriptor_pb2
+
+from modelish import mapper
+
 
 _PB_INTERNAL_TYPE_MAP = descriptor_pb2._FIELDDESCRIPTORPROTO.enum_types_by_name['Type'].values_by_number
 
@@ -85,7 +88,6 @@ def add_field(usage, name, pb_type, num=None):
             Returns:
             A pbandj.model.ProtocolBuffer.Message object
             '''
-            
             mapped_model = builder(**pbargs)
             mapped_model.add_unmapped_field(usage, name, pb_type)
             return mapped_model
@@ -96,20 +98,73 @@ def add_field(usage, name, pb_type, num=None):
     return wrap
 
 
-service_registry = {}
-
 def service(service_name, service_method_name, input_type, output_type):
     ''' Decorator for declaring a pbandj service endpoint
     '''
 
     def wrap(f):
-        service_method = {
-            'method' : service_method_name,
-            'input' : input_type,
-            'output' : output_type,
-            'handler' : f 
-        }
-        service_entry = service_registry.setdefault(service_name, [])
-        service_entry.append(service_method)
+#        service_method = {
+#            'method' : service_method_name,
+#            'input' : input_type,
+#            'output' : output_type,
+#            'handler' : f 
+#        }
+#        service_entry = service_registry.setdefault(service_name, [])
+#        service_entry.append(service_method)
+#        input_type = input_type.generate_protocol_buffer()
+#        output_type = output_type.generate_protocol_buffer()
+#        input_model = input_type
+#        if isinstance(input_type, type) and models.Model in input_type.__bases__: 
+#            input_model = input_type.generate_protocol_buffer()
+#        output_model = output_type
+#        if isinstance(output_type, type) and models.Model in output_type.__bases__: 
+#            output_model = output_type.generate_protocol_buffer()
+        meta = ServiceMeta(service_name, service_method_name, input_type, output_type)
+        service_registry.register(f, meta)
+#        d.__pbandj = meta
+#        if not hasattr(f, '__pbandj'):
+#            f.__pbandj = {}
+#        f.__pbandj['service'] = service_method
         return f    
     return wrap
+
+
+def service_import(xtra_proto):
+    ''' Decorator for adding an external .proto import for a service
+    '''
+
+    def wrap(f):
+        if not hasattr(f, '_pbandj'):
+            raise Exception("This doesn't taste like pbandj.  Have you added the %s decorator?" % service.__name__)
+        service_registry.add_proto_import(xtra_proto)
+        return f    
+    return wrap
+
+
+class ServiceRegistry(object):
+    
+    def __init__(self):
+        self.services = {}
+        self.proto_imports = set()
+        
+    def register(self, handler, meta):
+        group = self.services.setdefault(meta.service_name, [])
+        handler._pbandj = meta
+        group.append(handler)
+        
+    def add_proto_import(self, xtra_import):
+        self.proto_imports.add(xtra_import)
+        
+
+class ServiceMeta(object):
+    
+    def __init__(self, service_name, service_method_name, input_type, output_type, **kwargs):
+        self.service_name = service_name
+        self.method_name = service_method_name
+        self.input = input_type
+        self.output = output_type
+        self.xtra = kwargs
+        
+    
+        
+service_registry = ServiceRegistry()

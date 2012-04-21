@@ -10,12 +10,11 @@ from google.protobuf import descriptor_pb2
 
 
 import pbandj_test_pb2
-import django_types_pb2
 
 DESCRIPTOR = descriptor.FileDescriptor(
   name='pbandj_test_services.proto',
   package='',
-  serialized_pb='\n\x1apbandj_test_services.proto\x1a\x11pbandj_test.proto\x1a\x12\x64jango_types.proto2N\n\rSimpleService\x12\x1d\n\tgetSimple\x12\x07.Simple\x1a\x07.Simple\x12\x1e\n\ngetSimpler\x12\x07.Simple\x1a\x07.Simple2/\n\x0eSimplerService\x12\x1d\n\tsimplyGet\x12\x07.Simple\x1a\x07.SimpleB\x06\x88\x01\x01\x90\x01\x01')
+  serialized_pb='\n\x1apbandj_test_services.proto\x1a\x11pbandj_test.proto2N\n\rSimpleService\x12\x1d\n\tgetSimple\x12\x07.simple\x1a\x07.simple\x12\x1e\n\ngetSimpler\x12\x07.simple\x1a\x07.simple2/\n\x0eSimplerService\x12\x1d\n\tsimplyGet\x12\x07.simple\x1a\x07.simpleB\x06\x88\x01\x01\x90\x01\x01')
 
 
 
@@ -27,8 +26,8 @@ _SIMPLESERVICE = descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   options=None,
-  serialized_start=69,
-  serialized_end=147,
+  serialized_start=49,
+  serialized_end=127,
   methods=[
   descriptor.MethodDescriptor(
     name='getSimple',
@@ -64,8 +63,8 @@ _SIMPLERSERVICE = descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=1,
   options=None,
-  serialized_start=149,
-  serialized_end=196,
+  serialized_start=129,
+  serialized_end=176,
   methods=[
   descriptor.MethodDescriptor(
     name='simplyGet',

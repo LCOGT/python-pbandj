@@ -5,15 +5,18 @@ option py_generic_services = true;
 option java_generic_services = true;
 
 import "pbandj_test.proto";
-import "django_types.proto";
+import "another.proto";
+
+service SimplerService {
+	rpc simplyGet (simple) returns (simple);
+}
 
 service SimpleService {
-	rpc getSimple (Simple) returns (Simple);
-
-	rpc getSimpler (Simple) returns (Simple);
-
+	rpc getSimple (simple) returns (simple);
+	rpc getSimpler (simple) returns (simple);
 }
-service SimplerService {
-	rpc simplyGet (Simple) returns (Simple);
 
+service EvenSimplerService {
+	rpc getEven (SomethingIn) returns (SomethingOut);
 }
+

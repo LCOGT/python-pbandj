@@ -101,5 +101,6 @@ class Proto(object):
         # Services
         for service_name, service in self.services.items():
             out += str(service)
+            out += "\n"
             
         return out

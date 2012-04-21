@@ -69,4 +69,4 @@ class RPC(object):
         
     
     def __str__(self):
-        return 'rpc %s (%s) returns (%s);\n' % (self.name, self.rpc_in, self.rpc_out)
+        return 'rpc %s (%s) returns (%s);' % (self.name, self.rpc_in, self.rpc_out)

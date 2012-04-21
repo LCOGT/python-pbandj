@@ -4,78 +4,126 @@
 option py_generic_services = true;
 option java_generic_services = true;
 
-import "django_types.proto";
+message m2massoctest {
+	// Fields mapped from Django model m2massoctest
+	optional simple simple_fk = 1;
+	optional int32 assoc_test = 2;
+	optional manytomanythroughtest m2m_fk = 3;
+	optional int32 id = 4;
 
-// Generated from Django model M2MAssocTest
-message M2MAssocTest {
-	// Fields mapped to django model M2MAssocTest
-	optional Simple simple_fk = 1;
-	optional int32 simple_fk_id = 2;
-	optional int32 assoc_test = 3;
-	optional int32 m2m_fk_id = 4;
-	optional int32 id = 5;
 }
 
-// Generated from Django model Simple
-message Simple {
-	// Fields mapped to django model Simple
+message m2massocrecursiontest {
+	// Fields mapped from Django model m2massocrecursiontest
+	optional simple simple_fk = 1;
+	optional int32 assoc_test = 2;
+	optional manytomanythroughrecursiontest m2m_fk = 3;
+	optional int32 id = 4;
+
+}
+
+message simple {
+	// Fields mapped from Django model simple
 	optional int32 id = 1;
 	optional int32 val = 2;
+
 }
 
-// Generated from Django model ManyToManyThroughTest
-message ManyToManyThroughTest {
-	// Fields mapped to django model ManyToManyThroughTest
+message manytomanythroughtest {
+	// Fields mapped from Django model manytomanythroughtest
 	optional int32 test_val = 1;
 	optional int32 id = 2;
-	repeated M2MAssocTest m2m_test = 3;
+	repeated m2massoctest m2m_test = 3;
+
 }
 
-// Generated from Django model ForeignKeyTest
-message ForeignKeyTest {
-	// Fields mapped to django model ForeignKeyTest
+message manytomanythroughrecursiontest {
+	// Fields mapped from Django model manytomanythroughrecursiontest
+	optional int32 test_val = 1;
+	optional int32 id = 2;
+	repeated m2massocrecursiontest m2m_test = 3;
+
+}
+
+message convolutedrecursiontest {
+	// Fields mapped from Django model convolutedrecursiontest
+	optional int32 test_val = 1;
+	optional int32 id = 2;
+	repeated convolutedm2massocrecursiontest m2m_test = 3;
+
+}
+
+message foreignkeytest {
+	// Fields mapped from Django model foreignkeytest
 	optional int32 id = 1;
-	optional Simple fkey_test = 2;
-	optional int32 fkey_test_id = 3;
+	optional simple fkey_test = 2;
+
 }
 
-// Generated from Django model EnumTest
-message EnumTest {
-	// Generated from 'choices' for django model field: EnumTest.enum_test
-	enum Enum_test {
-		ENUM_TEST_VAL1 = 0;
-		ENUM_TEST_VAL2 = 1;
+message foreignkeyrecursiontest {
+	// Fields mapped from Django model foreignkeyrecursiontest
+	optional int32 id = 1;
+	optional int32 fkey_test = 2;
+
+}
+
+message convolutedm2massocrecursiontest {
+	// Fields mapped from Django model convolutedm2massocrecursiontest
+	optional convolutedforeignkeytest m2m_assoc_fk = 1;
+	optional simple simple_fk = 2;
+	optional int32 assoc_test = 3;
+	optional int32 m2m_fk = 4;
+	optional int32 id = 5;
+
+}
+
+message enumtest {
+	// Generated from 'choices' for django model field: enumtest.enum_test
+	enum enum_test_choices {
+		val2 = 1;
+		val1 = 0;
 	}
 	
-	// Fields mapped to django model EnumTest
-	optional Enum_test enum_test = 1;
+	// Fields mapped from Django model enumtest
+	optional enum_test_choices enum_test = 1;
 	optional int32 id = 2;
+
 }
 
-// Generated from Django model ManyToManyTest
-message ManyToManyTest {
-	// Fields mapped to django model ManyToManyTest
+message manytomanytest {
+	// Fields mapped from Django model manytomanytest
 	optional int32 test_val = 1;
 	optional int32 id = 2;
-	repeated Simple m2m_test = 3;
-	repeated int32 m2m_test_id = 4;
+	repeated simple m2m_test = 3;
+
 }
 
-// Generated from Django model OneOfEverything
-message OneOfEverything {
-	// Fields mapped to django model OneOfEverything
+message convolutedforeignkeytest {
+	// Fields mapped from Django model convolutedforeignkeytest
+	optional int32 fkey_test2 = 1;
+	optional int32 id = 2;
+	optional convolutedrecursiontest fkey_test = 3;
+
+}
+
+message oneofeverything {
+	// Fields not mapped to Django model
+	optional string zfield = 32768;
+	optional int32 zanotherfield = 32769;
+
+	// Fields mapped from Django model oneofeverything
 	optional string image_test = 1;
 	optional int32 sm_int_test = 2;
 	optional int32 id = 3;
-	optional Time time_test = 4;
+	optional string time_test = 4;
 	optional float float_test = 5;
 	optional int32 int_test = 6;
 	optional string ip_test = 7;
 	optional uint32 pos_int_test = 8;
 	optional string file_path_test = 9;
-	optional Date date_time_test = 10;
+	optional string date_time_test = 10;
 	optional string url_test = 11;
-	optional Date date_test = 12;
+	optional string date_test = 12;
 	optional uint32 pos_sm_int_test = 13;
 	optional string char_test = 14;
 	optional bool bool_test = 15;
@@ -86,8 +134,6 @@ message OneOfEverything {
 	optional double decimal_test = 20;
 	optional string comma_test = 21;
 	optional string file_test = 22;
-	// Unmapped fields
-	optional string zfield = 32769;
-	optional int32 zanotherfield = 32770;
+
 }
 

@@ -32,7 +32,7 @@ def model_to_message(dj_model, pb_field_num_start=0, pb_field_num_map=None):
         else:
             if(dj_field.choices):
                 enum_doc = "Generated from 'choices' for django model field: %s.%s" % (dj_model.name, dj_field.name)
-                field_enum = enum.Enum(dj_field.name, [a for a,b in dj_field.choices], enum_doc)
+                field_enum = enum.Enum(dj_field.name + "_choices", [a for a,b in dj_field.choices], enum_doc)
                 pb_enums.append(field_enum)
                 pb_field = field.Field(field.OPTIONAL, dj_field.name, field_enum, pb_field_num + 1)                  
             else:
@@ -51,6 +51,9 @@ def model_to_message(dj_model, pb_field_num_start=0, pb_field_num_map=None):
 
 
 class MappedModel(object):
+    """ Class mapping Django model to internal django model proxy and protocol
+    buffer message proxy
+    """
     
     MAPPED_FIELD_START = 0
     UNMAPPED_FIELD_START = 32768
@@ -84,18 +87,34 @@ class MappedModel(object):
             self.__next_unmapped_field += 1
         self.pb_msg.add_field('unmapped_fields', pb_field)
         
+
+#class MappedService(object):
+#    
+#    def __init__(self):
+#        self.services = []
         
+    
+
 
 class MappedModule(object):
+    """ Class combining MappedModel objects into a protocol buffer definition
+    """
     
     def __init__(self, module_name):
-        self.module_name = module_name
+        self.module_name = module_name.strip()
         self.mapped_models = []
+        self.services = []
+        self.xtra_proto_imports = []
         
 
     def add_mapped_model(self, mapped_model):
         self.mapped_models.append(mapped_model)
         
+    def add_service(self, service):
+        self.services.append(service)
+        
+    def add_import(self, imported_proto):
+        self.xtra_proto_imports.append(imported_proto)
     
     def generate_proto(self):
         # Create the proto model
@@ -104,5 +123,17 @@ class MappedModule(object):
             # Add top level messages to proto model
             p.add_msg(mapped_model.pb_msg)
             # Find messages included as fields and add to proto model
-            
+        for service in self.services:
+            p.add_service(service)
+        for xtra_import in self.xtra_proto_imports:
+            p.add_import(xtra_import)
         return p
+    
+    @property
+    def proto_filename(self):
+        return self.module_name + ".proto"
+    
+    
+    @property
+    def pb2_module_name(self):
+        return self.module_name + "_pb2"
