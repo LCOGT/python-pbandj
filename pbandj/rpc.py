@@ -16,16 +16,68 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Standard library imports
+import threading
+
 from time import time, sleep
 
 # Third party imports
 from protobuf.channel import SocketRpcChannel
+from protobuf.server import SocketRpcServer
 
 # Module imports
+from modelish.pb.service import Service
 
 # Constants
 RPC_HOST = "localhost"
 RPC_PORT = 8091
+
+class ServiceThread(threading.Thread):
+
+    def __init__(self, mapped_module, port, daemon=False):
+        threading.Thread.__init__(self)
+        self.module = mapped_module.load_pb2()
+        self.mapped_module = mapped_module
+#        for service in self.mapped_module.services:
+#            print type(service)
+#            if isinstance(service, Service):
+#                print "is a service"
+#                self.services.append(service)
+        self.port = port
+        self.setDaemon(daemon)
+
+#            def _createHandler(self, func):
+#                def handler(service_impl, controller, request, done):
+#                    try:
+#                        result = func(request)
+#                    except Exception, e:
+#                        controller.handleError(e, e.__str__())
+#                    done.run(result)
+
+    def run(self):
+        """ Start service thread """
+        # Create a server instance
+        server = SocketRpcServer(self.port,host='')
+        for service in self.mapped_module.services:
+            print "handling service " + service.name
+            service_class = self.module.__dict__[service.name]
+#            handlers = {}
+#
+#            # Link each method to its handler
+#            for method in service.rpc.values():
+#                print "handling method " + method.name
+#                #handlers[method.name] = self._createHandler(method.handler)
+#                print "using handler " + method.handler
+#                handlers[method.name] = method.handler
+
+            # Extend Service class and add handlers
+            newservice = type(service.name + "Impl",
+                          (service_class,), self.mapped_module.service_handlers[service.name])
+            server.registerService(newservice())
+
+        # Start the server
+        server.run();
+
+
 
 class ProtoBufRpcRequest(object):
     """ Class abstracting the Protocol Buffer RPC calls for a supplied

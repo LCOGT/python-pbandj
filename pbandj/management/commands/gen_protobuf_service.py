@@ -4,6 +4,7 @@ Generate protocol buffer representations of models
 import imp
 import os
 import sys
+import pickle
 
 from optparse import make_option
 
@@ -17,7 +18,7 @@ from pbandj.decorator import service_registry
 from pbandj import util
 
 PBANDJ_SERVICE_MODULES = getattr(settings, 'PBANDJ_SERVICE_MODULES', {})
-PBANDJ_SERVICE_MODULE = 'pbandj.handlers'
+PBANDJ_SERVICE_MODULE = 'pbandj_handlers'
 
 class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
@@ -41,7 +42,7 @@ class Command(BaseCommand):
         
         # See if the app exists
         app = app.split(".")[-1]
-        service_mod = app + '.' + PBANDJ_SERVICE_MODULES.get(app, PBANDJ_SERVICE_MODULE)
+        service_mod = app + '.' + PBANDJ_SERVICE_MODULES.get(app, app + "." + PBANDJ_SERVICE_MODULE)
         try:
             service_mod = __import__(service_mod, fromlist=[app])
         except Exception, e:
@@ -56,6 +57,7 @@ class Command(BaseCommand):
             mapped_module.add_import(xtra_import)
         for service_name, handlers in service_registry.services.items():
             pb_service = service.Service(service_name)
+            service_handlers = {}
             for handler in handlers:
                 meta = handler._pbandj
                 service_in = meta.input
@@ -67,7 +69,9 @@ class Command(BaseCommand):
                 pb_service.add_rpc(meta.method_name,
                                    service_in,
                                    service_out)
-            mapped_module.add_service(pb_service)
+                # Add a handler entry for this service method 
+                service_handlers[meta.method_name] = handler
+            mapped_module.add_service(pb_service, service_handlers)
 #            pb.add_service(pb_service)
 #        print pb
         proto = mapped_module.generate_proto()
@@ -75,8 +79,9 @@ class Command(BaseCommand):
         util.generate_pb2_module(mapped_module)
 #        util.write_proto_file(pb)
         
-        
-
+        pickeled_srvc_file = open(app + "/" + "pickeled_pbandj.service", 'w')
+        pickle.dump(mapped_module, pickeled_srvc_file)
+        pickeled_srvc_file.close()
 
 #if __name__ == "__main__":
 #    from obsdb import pb

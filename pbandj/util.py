@@ -24,10 +24,20 @@ def generate_pb2_module(mapped_module, path="."):
            be created
     """
     proto = mapped_module.generate_proto()
-    protos = proto.imports + [proto]
-    for proto in protos:
-        if isinstance(proto, Proto):
-            write_proto_file(proto)
+    write_proto_file(proto)
+#    protos = proto.imports + [proto]
+#    for proto in protos:
+#        # If it is a pbandj Proto object generate a .proto file for it
+#        if isinstance(proto, Proto):
+#            write_proto_file(proto)
+
+    # Find proto imports that originate from included .proto files and
+    # Generate pb2 moduels for them
+    for ext_proto in proto.imports:
+        if not isinstance(ext_proto, Proto):
+            system("protoc --python_out=" + path + 
+                   " --proto_path=" + path + " " +
+                   path + "/" + ext_proto)
     
     system("protoc --python_out=" + path +
            " --proto_path=" + path + " " +

@@ -1,3 +1,5 @@
+import imp
+
 from dj.field import ForeignKey, ManyToMany
 from dj.model import Model
 from pb import message, field, proto, enum
@@ -104,14 +106,23 @@ class MappedModule(object):
         self.module_name = module_name.strip()
         self.mapped_models = []
         self.services = []
+        # Map of service name to map of rpc handlers by rpc name
+        self.service_handlers = {}
         self.xtra_proto_imports = []
         
 
     def add_mapped_model(self, mapped_model):
         self.mapped_models.append(mapped_model)
         
-    def add_service(self, service):
+    def add_service(self, service, service_handlers):
+        '''Add a pb.Service to the MappedModule
+        Args:
+        service - (pb.Serivce) a service related to the mapped module
+        service_handlers - (dict) keys are pb.Service method names and values
+                           are funcions to be called when service is running.
+        '''
         self.services.append(service)
+        self.service_handlers[service.name] = service_handlers
         
     def add_import(self, imported_proto):
         self.xtra_proto_imports.append(imported_proto)
@@ -137,3 +148,20 @@ class MappedModule(object):
     @property
     def pb2_module_name(self):
         return self.module_name + "_pb2"
+    
+    def load_pb2(self):
+        '''Load and return the pb2 module related to this mapped module
+        '''
+        pb2_mod = None
+        mod_name = self.pb2_module_name
+        try:
+            pb2_mod = imp.load_source(mod_name, mod_name + ".py")
+        except Exception, e:
+            pass
+        try:
+            pb2_mod = imp.load_compiled(mod_name, mod_name + ".pyc")
+        except Exception, e:
+            pass
+        if pb2_mod == None:
+            print "Unable to load service module " + mod_name
+        return pb2_mod 
