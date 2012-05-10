@@ -44,7 +44,6 @@ class Command(BaseCommand):
         # See if the app exists
         app = app.split(".")[-1]
         service_mod = app + '.' + PBANDJ_SERVICE_MODULES.get(app, app + "." + PBANDJ_SERVICE_MODULE)
-        print "Using service module %s" % service_mod
         try:
             service_mod = __import__(service_mod, fromlist=[app])
         except Exception, e:

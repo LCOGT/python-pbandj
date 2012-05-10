@@ -58,7 +58,6 @@ class ServiceThread(threading.Thread):
         # Create a server instance
         server = SocketRpcServer(self.port,host='')
         for service in self.mapped_module.services:
-            print "handling service " + service.name
             service_class = self.module.__dict__[service.name]
 #            handlers = {}
 #

@@ -1,5 +1,4 @@
 
-
 class Message(object):
     """ A class containing data describing a protocol buffer
         message.

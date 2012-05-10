@@ -1,3 +1,5 @@
+from pbandj.modelish import types 
+
 from message import Message
 from enum import Enum
 
@@ -29,7 +31,11 @@ class Field(object):
         """
         self.name    = name
         self.usage   = usage
-        self.pb_type = pb_type
+        # If a string was passed as the type get the type get a wrapper type
+        if isinstance(pb_type, str):
+            self.pb_type = getattr(types, types.pbtype_name(pb_type))
+        else:
+            self.pb_type = pb_type
         self.field_num = int(field_num)
         
     def __eq__(self, other):
@@ -49,7 +55,7 @@ class Field(object):
         elif isinstance(self.pb_type, Enum):
             return '%s %s %s = %d;' % (self.usage, self.pb_type.name, self.name, self.field_num)
         else:
-            return '%s %s %s = %d;' % (self.usage, self.pb_type, self.name, self.field_num)
+            return '%s %s %s = %d;' % (self.usage, self.pb_type.ptype, self.name, self.field_num)
     
     # Hacked hash.  Fields aren't immutable as implemented.
     # Be careful using hash
