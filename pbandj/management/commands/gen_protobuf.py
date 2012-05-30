@@ -64,8 +64,8 @@ class Command(BaseCommand):
                 sys.exit(1)
 #        pb = ProtocolBuffer(app)
         mapped_module = mapper.MappedModule(app)
-        mapped_modles = [model.generate_protocol_buffer(old_pb2_mod=pb2_mod) for model in model_list if hasattr(model, '__PBANDJ')]
-        for mapped_model in mapped_modles:
+        mapped_models = [model.generate_protocol_buffer(old_pb2_mod=pb2_mod) for model in model_list if hasattr(model, '__PBANDJ')]
+        for mapped_model in mapped_models:
 #            pb.addMessage(msg)
             mapped_module.add_mapped_model(mapped_model)
         

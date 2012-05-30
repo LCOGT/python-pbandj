@@ -27,16 +27,12 @@ import decimal
 from datetime import datetime, time
 import traceback
 
-#from model import ProtocolBuffer
 from django.db import models
 
 from modelish import types
 from modelish.pb.enum import Enum
 from modelish.pb.message import Message
 from modelish.pb import field
-#from type_map import Date, Time
-#import type_map_base as types
-#import django_types_pb2 as proto
 
 
 

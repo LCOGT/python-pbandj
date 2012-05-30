@@ -7,6 +7,7 @@ def _make_type(name, ptype, pnum):
                            'pnum' : pnum,
                            '__eq__': lambda x,y: isinstance(y, x.__class__) and x.ptype == y.ptype,
                            '__ne__': lambda x,y: not x.__eq__(y),
+                           '__cmp__' : lambda x,y: x.pnum - y.pnum,
                            '__hash__': lambda x: pnum,
                            })
 

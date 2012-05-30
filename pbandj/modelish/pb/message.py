@@ -1,4 +1,29 @@
 
+class FieldKey(object):
+    """An immutable object to use as a unique key for a field
+    within a message
+    """
+    
+    def __init__(self, name, pb_type):
+        self._name = name
+        self._pb_type = pb_type
+    
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return (self._name == other._name and
+                self._pb_type == other._pb_type)
+    
+    def __ne__(self, other):
+        return not self.__eq__(other)
+    
+    def __str__(self):
+        return self._name + ":" + self._pb_type.ptype
+    
+    def __hash__(self):
+        return hash(self._name) ^ hash(self._pb_type)
+
+
 class Message(object):
     """ A class containing data describing a protocol buffer
         message.
@@ -86,6 +111,17 @@ class Message(object):
                                                   'fields' : field
                                                  }
     
+    
+    def field_group(self, group_name):
+        """ Get fields in a field group
+        
+        Args:
+        group_name - (str) Name of the field group to get fields for
+        
+        Returns:
+        dict {'doc' : 'field group comment', 'fields' : [pb.field.Field,...]}
+        """
+        return self.fields.get(group_name, None)
     
     def add_field(self, field_group=None, *field):
         """ Add a field to this Protocol Buffer message   

@@ -89,8 +89,8 @@ def model_to_field_map(pbandj_dj_model, pb_field_num_start=0, pb_field_num_map=N
                 pbandj_pb_field = field.Field(field.OPTIONAL, pbandj_dj_field.name, DJ2PB.get(pbandj_dj_field.dj_type), pb_field_num + 1)
         
         # Check the field number map for a matching field
-        if pbandj_pb_field in pb_field_num_map:
-            pbandj_pb_field.field_num = pb_field_num_map.get(pbandj_pb_field)
+        if pbandj_pb_field.field_key in pb_field_num_map.keys():
+            pbandj_pb_field.field_num = pb_field_num_map.get(pbandj_pb_field.field_key)
         else:
             pb_field_num += 1
         dj_to_pb_field_map[pbandj_pb_field.name] = (pbandj_dj_field, pbandj_pb_field)
@@ -120,8 +120,11 @@ class MappedModel(object):
     MAPPED_FIELD_START = 0
     UNMAPPED_FIELD_START = 32768
     
-    def __init__(self, dj_model, pb_field_num_map=None):
+    def __init__(self, dj_model, pb_field_num_map=None, msg_name=None):
         '''Create a MappedModel
+        If a field number map is provided, field numbering will start from
+        the max mapped field numbers to prevent collissions with fields that
+        may have previously existed in the message. 
         
         Args:
         dj_model - (django.db.Model type) A type extending django.db.Model
@@ -152,7 +155,9 @@ class MappedModel(object):
 #                                        pb_field_num_map=pb_field_num_map)
 #        self.pb_msg = pb_msg
 #        self.pb_to_dj_field_map = field_map
-        self.pbandj_pb_msg = message.Message(self.pbandj_dj_model.name)
+        if msg_name == None:
+            msg_name = self.pbandj_dj_model.name
+        self.pbandj_pb_msg = message.Message(msg_name)
         # Extract mapped pbandj pb fields
         pbandj_pb_fields = [mapped_field[1] for mapped_field in self.pb_to_dj_field_map.values()]
         # Find any enums related to those fields and add them to the message
@@ -166,13 +171,39 @@ class MappedModel(object):
         self.pbandj_pb_msg.add_field_group('unmapped_fields', group_doc="Fields not mapped to Django model")
         
         
-    def add_unmapped_field(self, usage, name, pb_type):
-        pb_field = field.Field(usage, name, pb_type, self.__next_unmapped_field)
-        if pb_field in self.pb_field_num_map:
+    def add_unmapped_field(self, usage, name, pb_type, field_num=None):
+        """ Add an unmapped field to the mapped model.
+        
+        Args:
+        usage - (str) protocol buffer usage OPTIONAL, REQUIRED, REPEATED
+        name - (str) name of the field
+        pb_type - (type) from pbandj.modelish.types
+        field_num(optional) - (int) field number to be used in the generated
+                  protocol buffer message.  Supplying this arg overrides any
+                  pre existing field_num.  Warning that using this may result
+                  in duplicate field numbers.  Use with care.
+        """
+        # Pick the next available field number if it wasn't supplied
+        if field_num == None:
+            field_num = self.__next_unmapped_field 
+        pb_field = field.Field(usage, name, pb_type, field_num)
+        
+        # See if there is a field in the field map so we keep the field_num
+        if pb_field in self.pb_field_num_map and field_num == None:
             pb_field.field_num  = self.pb_field_num_map.get(pb_field)
         else:
+            # Dont increment unless the generated field number was used
             self.__next_unmapped_field += 1
         self.pbandj_pb_msg.add_field('unmapped_fields', pb_field)
+        
+    
+    @property
+    def unmapped_fields(self):
+        """ List of unmapped protocol buffer fields asoociated with this
+        pbandj mapped model
+        """
+        #TODO: Replace unmapped_fields with constant throughout code
+        return self.pbandj_pb_msg.field_group('unmapped_fields').get('fields', [])
         
 
 #class MappedService(object):

@@ -2,6 +2,7 @@ from django.db import models
 from google.protobuf import descriptor_pb2
 
 from modelish import mapper
+from modelish.pb import field
 
 
 _PB_INTERNAL_TYPE_MAP = descriptor_pb2._FIELDDESCRIPTORPROTO.enum_types_by_name['Type'].values_by_number
@@ -26,9 +27,13 @@ def __get_msg_descriptor(pb_mod, msg_name):
 def protocol_buffer_message(*args, **kwargs):
     ''' Decorator for Django model classes adding static method
     for generating a protocol buffer message definition
+    
+    Args:
+    msg_name - (str) An alternate name to be used for protocol buffer message
     '''
     def wrap(model):
         # Define a custom behavior based on decorator parameters
+        #TODO: Rename to something like generate pbandj model
         def generate_protocol_buffer(**pbargs):
             ''' Generate a protocol buffer message descriptor
             
@@ -47,9 +52,10 @@ def protocol_buffer_message(*args, **kwargs):
             old_pb2_mod = pbargs.get('old_pb2_mod', None) 
             if old_pb2_mod:
                 msg_desc = __get_msg_descriptor(old_pb2_mod, msg_name)
-                field_num_map = dict([((f.name, _PB_INTERNAL_TYPE_MAP[f.type].name), f.number) for f in  msg_desc.fields])
+                # Create a dict mapping tuples ('field_name', field_type) to field number
+                field_num_map = dict([field.Field(field.OPTIONAL, f.name, _PB_INTERNAL_TYPE_MAP[f.type].name, -1) for f in  msg_desc.fields])
                 print field_num_map
-                kwargs['field_num_map'] = field_num_map
+                kwargs['pb_field_num_map'] = field_num_map
             # TODO remove need to pass msg_name as non kwarg
             if kwargs.has_key('msg_name'):
                 return mapper.MappedModel(model, **kwargs)
@@ -69,9 +75,18 @@ def protocol_buffer_message(*args, **kwargs):
         return wrap
     
     
-def add_field(usage, name, pb_type, num=None):
+def add_field(usage, name, pb_type, field_num=None):
     ''' Decorator for adding an umapped field to a protocol buffer message
     generated from a django model
+    
+    Args:
+    usage - (str) protocol buffer usage OPTIONAL, REQUIRED, REPEATED
+    name - (str) name of the field
+    pb_type - (type) from pbandj.modelish.types
+    field_num(optional) - (int) field number to be used in the generated
+              protocol buffer message.  Supplying this arg overrides any
+              pre existing field_num.  Warning that using this may result
+              in duplicate field numbers.  Use with care.
     '''
     
     def wrap(model):
@@ -89,7 +104,7 @@ def add_field(usage, name, pb_type, num=None):
             A pbandj.model.ProtocolBuffer.Message object
             '''
             mapped_model = builder(**pbargs)
-            mapped_model.add_unmapped_field(usage, name, pb_type)
+            mapped_model.add_unmapped_field(usage, name, pb_type, field_num)
             return mapped_model
         
         model.generate_protocol_buffer = staticmethod(generate_protocol_buffer)

@@ -1,6 +1,6 @@
 from pbandj.modelish import types 
 
-from message import Message
+from message import Message, FieldKey
 from enum import Enum
 
 
@@ -8,6 +8,7 @@ OPTIONAL = "optional"
 REQUIRED = "required"
 REPEATED = "repeated"
 
+        
 
 class Field(object):
     """ A class containing data describing a
@@ -37,7 +38,8 @@ class Field(object):
         else:
             self.pb_type = pb_type
         self.field_num = int(field_num)
-        
+        self.field_key = FieldKey(name, pb_type)
+    
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
@@ -46,7 +48,7 @@ class Field(object):
                 self.pb_type == other.pb_type and
                 self.field_num == other.field_num)
     
-    def __ne_(self, other):
+    def __ne__(self, other):
         return not self.__eq__(other)
     
     def __str__(self):

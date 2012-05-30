@@ -25,7 +25,10 @@ from django.db import models
 from pbandj.decorator import protocol_buffer_message, add_field
 from pbandj.modelish.pb import field
 
-
+# Used for testing descorators from unit tests
+#class UnmappedModel(models.Model):
+#    int_test = models.IntegerField()
+#    char_test = models.CharField()
 
 #@protocol_buffer_message(field_num_map={('file_test', 'TYPE_STRING') : 1980})
 @add_field('optional', 'zanotherfield', 'int32')
