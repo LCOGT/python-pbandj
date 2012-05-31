@@ -163,12 +163,32 @@ class ServiceRegistry(object):
         self.proto_imports = set()
         
     def register(self, handler, meta):
+        """Register a handler method
+        
+        Args:
+        handler - (method) Method to be called by service
+        meta - (ServiceMeta) Description of service method
+        """
         group = self.services.setdefault(meta.service_name, [])
         handler._pbandj = meta
         group.append(handler)
         
     def add_proto_import(self, xtra_import):
+        """Add a .proto to be imported by the proto the services in this registry
+        will be declared in.
+        """
         self.proto_imports.add(xtra_import)
+        
+    def methods_by_service_name(self, service_name):
+        """Returns list of ServiceMeta objects for the supplied
+        service name
+        """
+        return self.services.get(service_name, [])
+    
+    def service_names(self):
+        """Returns list of service names known to registry
+        """
+        return self.services.keys()
         
 
 class ServiceMeta(object):

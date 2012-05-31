@@ -57,7 +57,7 @@ class Message(object):
             return False
         if self.name != other.name: return False
         if self.fields != other.fields: return False
-        if self.enums != len(other.enums): return False
+        if self.enums != other.enums: return False
         
         return True
         

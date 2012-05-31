@@ -46,7 +46,6 @@ class OneOfEverything(models.Model):
     text_test = models.TextField()
     time_test = models.TimeField()
     url_test = models.URLField()
-    xml_test = models.XMLField()
 
 
 class Simple(models.Model):
