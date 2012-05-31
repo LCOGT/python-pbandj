@@ -179,8 +179,6 @@ class TestDjangoFieldConversion(TestCase):
     """
     
     mapped_module = None
-    django_ooe = None
-    proto_ooe = None
     converter = None
     
     @classmethod
@@ -188,43 +186,6 @@ class TestDjangoFieldConversion(TestCase):
         cls.mapped_module = mapper.MappedModule('TestDjangoFieldConversion')
         cls.mapped_module.add_mapped_model(test_models.OneOfEverything.generate_protocol_buffer())
         cls.converter = Converter(cls.mapped_module)
-        
-        cls.django_ooe = test_models.OneOfEverything()
-        cls.django_ooe.bool_test = True
-        cls.django_ooe.char_test = "ABC123"
-        cls.django_ooe.comma_test = "A,B,C"
-        cls.django_ooe.date_test = datetime(1980, 6, 10)
-        cls.django_ooe.date_time_test = datetime(1989, 9, 19, 1, 2, 3)
-        cls.django_ooe.time_test = datetime(1989, 9, 19, 1, 2, 3)
-#        cls.django_ooe.date_test.year = 1980
-#        cls.django_ooe.date_test.month = 6
-#        cls.django_ooe.date_test.day = 10
-#        cls.django_ooe.date_time_test.year = 1989
-#        cls.django_ooe.date_time_test.month = 9
-#        cls.django_ooe.date_time_test.day = 19
-#        cls.django_ooe.date_time_test.time.hour = 1
-#        cls.django_ooe.date_time_test.time.minute = 2
-#        cls.django_ooe.date_time_test.time.second = 3
-        cls.django_ooe.decimal_test = 12.34
-        cls.django_ooe.float_test = 56.789
-        cls.django_ooe.email_test = 'zman@namz.com'
-        cls.django_ooe.file_test = "path/to/file"
-        cls.django_ooe.image_test = "/path/to/image"
-        cls.django_ooe.int_test = -1
-        cls.django_ooe.ip_test = '123.456.789.123'
-        cls.django_ooe.null_bool_test = False
-        cls.django_ooe.pos_int_test = 1
-        cls.django_ooe.pos_sm_int_test = 1
-        cls.django_ooe.slug_test = 'This is a slug'
-        cls.django_ooe.sm_int_test = -1
-        cls.django_ooe.text_test = 'This is some text'
-#        cls.django_ooe.time_test.hour = 12
-#        cls.django_ooe.time_test.minute = 13
-#        cls.django_ooe.time_test.second = 14
-        cls.django_ooe.url_test = 'http://www.lcogt.net'
-        cls.django_ooe.xml_test = '<abc>123</abc>'
-        
-#        cls.proto_ooe = cls.converter.djtopb(cls.django_ooe)
         
     def setUp(self):
         self.django_ooe = test_models.OneOfEverything()
@@ -436,11 +397,11 @@ class TestDjangoFieldConversion(TestCase):
         self.assertEqual('http://lcogt.net', proto_ooe.url_test)
         self.assertEqual('http://lcogt.net', self.converter.pbtodj(proto_ooe).url_test)
     
-    def test_xml_conversion(self):
-        self.django_ooe.xml_test = '<abc>123</abc>'
-        proto_ooe = self.converter.djtopb(self.django_ooe)
-        self.assertEqual('<abc>123</abc>', proto_ooe.xml_test)
-        self.assertEqual('<abc>123</abc>', self.converter.pbtodj(proto_ooe).xml_test)
+#    def test_xml_conversion(self):
+#        self.django_ooe.xml_test = '<abc>123</abc>'
+#        proto_ooe = self.converter.djtopb(self.django_ooe)
+#        self.assertEqual('<abc>123</abc>', proto_ooe.xml_test)
+#        self.assertEqual('<abc>123</abc>', self.converter.pbtodj(proto_ooe).xml_test)
         
     
         
