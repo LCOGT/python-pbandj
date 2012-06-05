@@ -117,7 +117,7 @@ class Converter(object):
         #Convert Decimal back to a python float which is the same as a double
         #in protocol buffers apparently
         conv_helpers[(models.DecimalField,
-                     types.PB_TYPE_DOUBLE)] = lambda val, kwargs : decimal.Decimal(val).__float__()
+                     types.PB_TYPE_DOUBLE)] = lambda val, kwargs : float(decimal.Decimal(val))
         
         #Help convert a Django DateTimeField into a consistent string format
         #for transport
@@ -161,10 +161,10 @@ class Converter(object):
                           lambda val, kwargs : val.name
                           
         conv_helpers[(Enum, models.CharField)] = \
-                          lambda val, kwargs: dict([(b,a) for a,b in kwargs['input_type'].dj2val.items()])[val]
+                          lambda val, kwargs: kwargs['input_type'][val]
         
         conv_helpers[(models.CharField, Enum)] = \
-                          lambda val, kwargs: kwargs['output_type'].dj2val[val]
+                          lambda val, kwargs: kwargs['output_type'][val]
                           
         conv_helpers[(models.ForeignKey, types.PB_TYPE_INT32)] = \
                           lambda val, kwargs: val.pk
@@ -209,8 +209,17 @@ class Converter(object):
 #        conv_helpers[(Message, models.TimeField)] = _time_pb2dj
 
         self.helpers = conv_helpers
+        
+        # Add converter for each enumerated type
+        for mapped_model in self.mapped_module.mapped_models:
+            enums = mapped_model.pbandj_pb_msg.enums
+            for enum in enums:
+                # Django -> Protocol Buffer
+                self.helpers[(models.CharField, enum)] = lambda val, kwargs : kwargs['output_type'][str(val)]
+                # Protocol Buffer -> Django
+                self.helpers[(enum, models.CharField)] =  lambda val, kwargs : kwargs['input_type'][val]
 
-    def addConvHelper(self, input_type, output_type, helper):
+    def add_conv_helper(self, input_type, output_type, helper):
         '''Add a conversion helper to go from the supplied input type to
            output type by calling the helper function.  Helper should
            take have the format helper(val, kwargs).  Args passed to the
@@ -224,7 +233,7 @@ class Converter(object):
            helper between the type(input_obj) and output_type the input_obj
            will be returned unchanged
         '''
-        print input_type, output_type, val
+#        print input_type, output_type, val
         helper = self.helpers.get((input_type, output_type), lambda x, kwargs : x)
         kwargs['input_type'] = input_type
         kwargs['output_type'] = output_type
@@ -335,6 +344,7 @@ class Converter(object):
                 # Iterate thorugh and convert each value independantly
                 for val in val_list:
                     try:
+#                        print dj_field.dj_type, isinstance(pb_field.pb_type, Enum)
                         pb_val = self.convert(dj_field.dj_type,
                                           pb_field.pb_type,
                                           val, pb=mapped_model, module=self.mapped_module.load_pb2())
@@ -368,7 +378,7 @@ class Converter(object):
                         try:
                             setattr(protoMsg, pb_field.name, pb_val)
                         except Exception, e:
-                            print dj_field.name, type(dj_field), dj_field.dj_type, type(pb_field), pb_field.pb_type, type(val), val #val.pk, val.fk_test,  pb_val
+                            #print dj_field.name, type(dj_field), dj_field.dj_type, type(pb_field), pb_field.pb_type, type(val), val #val.pk, val.fk_test,  pb_val
                             traceback.print_exc()
                             raise e
         return protoMsg

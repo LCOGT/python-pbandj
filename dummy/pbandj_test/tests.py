@@ -185,6 +185,7 @@ class TestDjangoFieldConversion(TestCase):
     def setUpClass(cls):
         cls.mapped_module = mapper.MappedModule('TestDjangoFieldConversion')
         cls.mapped_module.add_mapped_model(test_models.OneOfEverything.generate_protocol_buffer())
+        util.generate_pb2_module(cls.mapped_module)
         cls.converter = Converter(cls.mapped_module)
         
     def setUp(self):
@@ -235,7 +236,7 @@ class TestDjangoFieldConversion(TestCase):
         proto_ooe = self.converter.djtopb(self.django_ooe)
         self.assertEqual('14:30:00.999999', proto_ooe.time_test)
         self.assertEqual(datetime(1980, 6, 10, 14, 30, 0, 999999).time(), self.converter.pbtodj(proto_ooe).time_test)
-        
+  
     def test_decimal_conversion(self):
         self.django_ooe.decimal_test = 0.0
         proto_ooe = self.converter.djtopb(self.django_ooe)
@@ -403,5 +404,39 @@ class TestDjangoFieldConversion(TestCase):
 #        self.assertEqual('<abc>123</abc>', proto_ooe.xml_test)
 #        self.assertEqual('<abc>123</abc>', self.converter.pbtodj(proto_ooe).xml_test)
         
+
+@decorator.protocol_buffer_message
+class EnumTest(models.Model):
+    test_enum_choices = (('Val1', 'Long Name Val 1'),
+                         ('Val2', 'Long Name Val 2'))
+    enum_test = models.CharField(max_length = 20, choices=test_enum_choices)
+
+
+class TestDjangoCharChoicesEnumConversion(TestCase):
     
+    mapped_module = None
+    converter = None
+    pb2 = None
+    
+    @classmethod
+    def setUpClass(cls):
+        cls.mapped_module = mapper.MappedModule('TestDjangoCharChoicesEnumConversion')
+        cls.mapped_module.add_mapped_model(EnumTest.generate_protocol_buffer())
+        util.generate_pb2_module(cls.mapped_module)
+        cls.pb2 = cls.mapped_module.load_pb2()
+        cls.converter = Converter(cls.mapped_module)
+        
+    def setUp(self):
+        self.django_et = EnumTest()
+        
+    def test_enum_conversion(self):
+        self.django_et.enum_test = 'Val1'
+        proto_et = self.converter.djtopb(self.django_et)
+        self.assertEqual(0, proto_et.enum_test)
+        self.assertEqual('Val1', self.converter.pbtodj(proto_et).enum_test)
+        self.django_et.enum_test = 'Val2'
+        proto_et = self.converter.djtopb(self.django_et)
+        self.assertEqual(1, proto_et.enum_test)
+        self.assertEqual('Val2', self.converter.pbtodj(proto_et).enum_test)
+        
         

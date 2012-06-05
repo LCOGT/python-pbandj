@@ -15,7 +15,7 @@ class Enum(object):
         self.name = name
         self.doc = doc
         # Construct a 2 way map from string to val
-        self.values = [(str(values[i].strip().lower()), i) for i in range(len(values))]
+        self.values = [(str(values[i].strip()), i) for i in range(len(values))]
         self.values += [(i, val) for val, i in self.values]
         self.values = dict(self.values)
         
