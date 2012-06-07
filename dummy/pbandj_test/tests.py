@@ -438,5 +438,72 @@ class TestDjangoCharChoicesEnumConversion(TestCase):
         proto_et = self.converter.djtopb(self.django_et)
         self.assertEqual(1, proto_et.enum_test)
         self.assertEqual('Val2', self.converter.pbtodj(proto_et).enum_test)
+
+
+
+
+@decorator.protocol_buffer_message
+class ForeignKeyParentTestModel(models.Model):
+    val = models.IntegerField()
+
+
+@decorator.protocol_buffer_message
+class ForeignKeyChildTestModel(models.Model):
+    fkey_test = models.ForeignKey(ForeignKeyParentTestModel)
+    
+    
+@decorator.protocol_buffer_message(follow_related=False)
+class ForeignKeyChildTestFollowRelatedFalseModel(models.Model):
+    fkey_test = models.ForeignKey(ForeignKeyParentTestModel)    
+
         
+class TestDjangoForeignKeyConversion(TestCase):
+    
+    mapped_module = None
+    converter = None
+    pb2 = None
+    
+    @classmethod
+    def setUpClass(cls):
+        cls.mapped_module = mapper.MappedModule('TestDjangoForeignKeyConversion')
+        cls.mapped_module.add_mapped_model(ForeignKeyParentTestModel.generate_protocol_buffer())
+        cls.mapped_module.add_mapped_model(ForeignKeyChildTestModel.generate_protocol_buffer())
+        cls.mapped_module.add_mapped_model(ForeignKeyChildTestFollowRelatedFalseModel.generate_protocol_buffer())
+        util.generate_pb2_module(cls.mapped_module)
+        cls.pb2 = cls.mapped_module.load_pb2()
+        cls.converter = Converter(cls.mapped_module)
         
+    def setUp(self):
+        self.django_fktp = ForeignKeyParentTestModel()
+        self.django_fktp.val = 1
+        self.django_fktp.save()
+        
+        self.django_fktc = ForeignKeyChildTestModel()
+        self.django_fktc.fkey_test = self.django_fktp
+        self.django_fktc.save()
+        
+        self.django_fktcfrf = ForeignKeyChildTestFollowRelatedFalseModel()
+        self.django_fktcfrf.fkey_test = self.django_fktp
+        self.django_fktcfrf.save()
+        
+    def cleanUp(self):
+        self.django_fktp.delete()
+        self.django_fktc.delete()
+        self.django_fktcfrf.delete()
+           
+    def test_fk_conversion(self):
+        proto_fktp = self.converter.djtopb(self.django_fktp)
+        proto_fktc = self.converter.djtopb(self.django_fktc)
+        self.assertEqual(proto_fktp, proto_fktc.fkey_test)
+        self.assertEqual(self.django_fktp, self.converter.pbtodj(proto_fktc).fkey_test)
+        
+    def test_fk_conversion_follow_related_false(self):
+        proto_fktp = self.converter.djtopb(self.django_fktp)
+        proto_fktcfrf = self.converter.djtopb(self.django_fktcfrf)
+        self.assertEqual(self.django_fktp.id, proto_fktcfrf.fkey_test)
+        self.assertEqual(self.django_fktp.pk, proto_fktcfrf.fkey_test)
+        self.assertEqual(self.django_fktcfrf.fkey_test_id, proto_fktcfrf.fkey_test)
+        
+        self.assertEqual(self.django_fktp, self.converter.pbtodj(proto_fktcfrf).fkey_test)
+        
+    
