@@ -30,6 +30,15 @@ def protocol_buffer_message(*args, **kwargs):
     
     Args:
     msg_name - (str) An alternate name to be used for protocol buffer message
+    include - (List) A list of field names from the model to
+                      be included in the mapping
+    exclude - (List) A list of field names to exclude from the
+                      model.  Only used if included arg is []
+    follow_related - (bool)Follow into relation fields if true or 
+                       using pk if false
+    no_follow_fields - (List) Field names which should not be followed.
+                          Only used if follow_related=True
+    no_follow_models - (List) Django models not to follow as relations
     '''
     def wrap(model):
         # Define a custom behavior based on decorator parameters

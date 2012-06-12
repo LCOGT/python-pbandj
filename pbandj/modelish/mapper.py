@@ -72,14 +72,20 @@ def model_to_field_map(pbandj_dj_model, pb_field_num_start=0, pb_field_num_map=N
     dj_to_pb_field_map = {}
     pb_field_num = pb_field_num_start
     for pbandj_dj_field in pbandj_dj_model.fields:
-        if isinstance(pbandj_dj_field, ForeignKey) and isinstance(pbandj_dj_field.dj_type, Model):
-            fk_field_map = model_to_field_map(pbandj_dj_field.dj_type)
-            fk_pb_msg = field_map_to_message(pbandj_dj_field.dj_type.name, fk_field_map)
-            pbandj_pb_field = field.Field(field.OPTIONAL, pbandj_dj_field.name, fk_pb_msg, pb_field_num + 1)
-        elif isinstance(pbandj_dj_field, ManyToMany) and isinstance(pbandj_dj_field.dj_type, Model):
-            m2m_field_map = model_to_field_map(pbandj_dj_field.dj_type)
-            m2m_pb_msg = field_map_to_message(pbandj_dj_field.dj_type.name, m2m_field_map)
-            pbandj_pb_field = field.Field(field.REPEATED, pbandj_dj_field.name, m2m_pb_msg, pb_field_num + 1)
+        if isinstance(pbandj_dj_field, ForeignKey):
+            if isinstance(pbandj_dj_field.dj_type, Model):
+                fk_field_map = model_to_field_map(pbandj_dj_field.dj_type)
+                fk_pb_msg = field_map_to_message(pbandj_dj_field.dj_type.name, fk_field_map)
+                pbandj_pb_field = field.Field(field.OPTIONAL, pbandj_dj_field.name, fk_pb_msg, pb_field_num + 1)
+            else:
+                pbandj_pb_field = field.Field(field.OPTIONAL, pbandj_dj_field.name,  DJ2PB.get(pbandj_dj_field.dj_type), pb_field_num + 1)
+        elif isinstance(pbandj_dj_field, ManyToMany):
+            if isinstance(pbandj_dj_field.dj_type, Model):
+                m2m_field_map = model_to_field_map(pbandj_dj_field.dj_type)
+                m2m_pb_msg = field_map_to_message(pbandj_dj_field.dj_type.name, m2m_field_map)
+                pbandj_pb_field = field.Field(field.REPEATED, pbandj_dj_field.name, m2m_pb_msg, pb_field_num + 1)
+            else:
+                pbandj_pb_field = field.Field(field.REPEATED, pbandj_dj_field.name, DJ2PB.get(pbandj_dj_field.dj_type), pb_field_num + 1)
         else:
             if(pbandj_dj_field.choices):
                 enum_doc = "Generated from 'choices' for django model field: %s.%s" % (pbandj_dj_model.name, pbandj_dj_field.name)
@@ -120,7 +126,7 @@ class MappedModel(object):
     MAPPED_FIELD_START = 0
     UNMAPPED_FIELD_START = 32768
     
-    def __init__(self, dj_model, pb_field_num_map=None, msg_name=None):
+    def __init__(self, dj_model, pb_field_num_map=None, msg_name=None, **kwargs):
         '''Create a MappedModel
         If a field number map is provided, field numbering will start from
         the max mapped field numbers to prevent collissions with fields that
@@ -142,7 +148,7 @@ class MappedModel(object):
         self.__next_unmapped_field = max([MappedModel.UNMAPPED_FIELD_START] + 
                                          [x for x in self.pb_field_num_map.values() if x >= MappedModel.UNMAPPED_FIELD_START])
         # Create pbandj dj model
-        self.pbandj_dj_model = Model.from_django_model(dj_model)
+        self.pbandj_dj_model = Model.from_django_model(dj_model, **kwargs)
         
         # Create field map
         self.pb_to_dj_field_map = model_to_field_map(self.pbandj_dj_model,
@@ -225,6 +231,7 @@ class MappedModule(object):
         # Map of service name to map of rpc handlers by rpc name
         self.service_handlers = {}
         self.xtra_proto_imports = []
+        self.__pb2 = None
         
 
     def add_mapped_model(self, mapped_model):
@@ -268,6 +275,9 @@ class MappedModule(object):
     def load_pb2(self):
         '''Load and return the pb2 module related to this mapped module
         '''
+        if self.__pb2:
+            return self.__pb2
+        print "Importing pb2 module for", self.module_name
         pb2_mod = None
         mod_name = self.pb2_module_name
         try:
@@ -280,4 +290,5 @@ class MappedModule(object):
             pass
         if pb2_mod == None:
             print "Unable to load service module " + mod_name
+        self.__pb2 = pb2_mod
         return pb2_mod 

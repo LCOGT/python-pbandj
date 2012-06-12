@@ -21,8 +21,9 @@ class Field(object):
 
 class ForeignKey(Field):
     
-    def __init__(self, name, dj_type):
+    def __init__(self, name, dj_type, related_model=None):
         Field.__init__(self, name, dj_type)
+        self.related_model = related_model
     
     @staticmethod    
     def from_dj_field(dj_field, **kwargs): 
@@ -37,7 +38,7 @@ class ForeignKey(Field):
             
         if isinstance(dj_field, dj_models.ForeignKey):
             # By default leave type as a ForeignKey
-            field = ForeignKey(dj_field.name, type(dj_field))
+            field = ForeignKey(dj_field.name, type(dj_field), dj_field.rel.to)
         else:
             raise PbandjFieldException("Supplied field is not a ForeignKey")
             
@@ -56,9 +57,10 @@ class ForeignKey(Field):
     
 class ManyToMany(Field):
     
-    def __init__(self, name, dj_type):
+    def __init__(self, name, dj_type, related_model=None):
         Field.__init__(self, name, dj_type)
-#        self.through = None
+        self.related_model = related_model
+        self.related_through_model = None
         
     @staticmethod
     def from_dj_field(dj_field, **kwargs): 
@@ -73,7 +75,7 @@ class ManyToMany(Field):
             
         if isinstance(dj_field, dj_models.ManyToManyField):
             # By default leave type as a ManyToMany
-            field = ManyToMany(dj_field.name, type(dj_field))
+            field = ManyToMany(dj_field.name, type(dj_field), dj_field.rel.to)
         else:
             raise PbandjFieldException("Supplied field is not a ManyToManyField")
         
@@ -85,6 +87,7 @@ class ManyToMany(Field):
             if (not dj_field.rel.through is None and
                 len(dj_field.rel.through._meta.fields) > 3):
                 # There is data associated with the relation
+                field.related_through_model = dj_field.rel.through
                 if follow_related and not dj_field.rel.through in no_follow_models:
                     field.dj_type = Model.from_django_model(dj_field.rel.through, **kwargs) 
 

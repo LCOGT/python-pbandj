@@ -474,36 +474,109 @@ class TestDjangoForeignKeyConversion(TestCase):
         cls.converter = Converter(cls.mapped_module)
         
     def setUp(self):
-        self.django_fktp = ForeignKeyParentTestModel()
-        self.django_fktp.val = 1
-        self.django_fktp.save()
+        self.django_fkpt = ForeignKeyParentTestModel()
+        self.django_fkpt.val = 1
+        self.django_fkpt.save()
         
-        self.django_fktc = ForeignKeyChildTestModel()
-        self.django_fktc.fkey_test = self.django_fktp
-        self.django_fktc.save()
+        self.django_fkct = ForeignKeyChildTestModel()
+        self.django_fkct.fkey_test = self.django_fkpt
+        self.django_fkct.save()
         
-        self.django_fktcfrf = ForeignKeyChildTestFollowRelatedFalseModel()
-        self.django_fktcfrf.fkey_test = self.django_fktp
-        self.django_fktcfrf.save()
+        self.django_fkctfrf = ForeignKeyChildTestFollowRelatedFalseModel()
+        self.django_fkctfrf.fkey_test = self.django_fkpt
+        self.django_fkctfrf.save()
         
     def cleanUp(self):
-        self.django_fktp.delete()
-        self.django_fktc.delete()
-        self.django_fktcfrf.delete()
+        self.django_fkpt.delete()
+        self.django_fkct.delete()
+        self.django_fkctfrf.delete()
            
     def test_fk_conversion(self):
-        proto_fktp = self.converter.djtopb(self.django_fktp)
-        proto_fktc = self.converter.djtopb(self.django_fktc)
-        self.assertEqual(proto_fktp, proto_fktc.fkey_test)
-        self.assertEqual(self.django_fktp, self.converter.pbtodj(proto_fktc).fkey_test)
+        proto_fkpt = self.converter.djtopb(self.django_fkpt)
+        proto_fkct = self.converter.djtopb(self.django_fkct)
+        self.assertEqual(proto_fkpt, proto_fkct.fkey_test)
+        self.assertEqual(self.django_fkpt, self.converter.pbtodj(proto_fkct).fkey_test)
         
     def test_fk_conversion_follow_related_false(self):
-        proto_fktp = self.converter.djtopb(self.django_fktp)
-        proto_fktcfrf = self.converter.djtopb(self.django_fktcfrf)
-        self.assertEqual(self.django_fktp.id, proto_fktcfrf.fkey_test)
-        self.assertEqual(self.django_fktp.pk, proto_fktcfrf.fkey_test)
-        self.assertEqual(self.django_fktcfrf.fkey_test_id, proto_fktcfrf.fkey_test)
+        proto_fkpt = self.converter.djtopb(self.django_fkpt)
+        proto_fkctfrf = self.converter.djtopb(self.django_fkctfrf)
+        self.assertEqual(self.django_fkpt.id, proto_fkctfrf.fkey_test)
+        self.assertEqual(self.django_fkpt.pk, proto_fkctfrf.fkey_test)
+        self.assertEqual(self.django_fkctfrf.fkey_test_id, proto_fkctfrf.fkey_test)
+        self.assertEqual(self.django_fkpt, self.converter.pbtodj(proto_fkctfrf).fkey_test)
         
-        self.assertEqual(self.django_fktp, self.converter.pbtodj(proto_fktcfrf).fkey_test)
-        
+
+@decorator.protocol_buffer_message
+class ManyToManyParentTestModel(models.Model):
+    val = models.IntegerField()
+
+
+@decorator.protocol_buffer_message
+class ManyToManyChildTestModel(models.Model):
+    m2m_test = models.ManyToManyField(ManyToManyParentTestModel)
     
+    
+@decorator.protocol_buffer_message(follow_related=False)
+class ManyToManyChildTestFollowRelatedFalseModel(models.Model):
+    m2m_test = models.ManyToManyField(ManyToManyParentTestModel)    
+
+    
+class TestDjangoManyToManyConversion(TestCase):
+    
+    mapped_module = None
+    converter = None
+    pb2 = None
+    
+    @classmethod
+    def setUpClass(cls):
+        cls.mapped_module = mapper.MappedModule('TestDjangoManyToManyConversion')
+        cls.mapped_module.add_mapped_model(ManyToManyParentTestModel.generate_protocol_buffer())
+        cls.mapped_module.add_mapped_model(ManyToManyChildTestModel.generate_protocol_buffer())
+        cls.mapped_module.add_mapped_model(ManyToManyChildTestFollowRelatedFalseModel.generate_protocol_buffer())
+        util.generate_pb2_module(cls.mapped_module)
+        cls.pb2 = cls.mapped_module.load_pb2()
+        cls.converter = Converter(cls.mapped_module)
+        
+    def setUp(self):
+        self.django_m2mpt_1 = ManyToManyParentTestModel()
+        self.django_m2mpt_1.val = 1
+        self.django_m2mpt_1.save()
+        
+        self.django_m2mpt_2 = ManyToManyParentTestModel()
+        self.django_m2mpt_2.val = 2
+        self.django_m2mpt_2.save()
+        
+        self.django_m2mct = ManyToManyChildTestModel()
+        self.django_m2mct.save()
+        self.django_m2mct.m2m_test.add(self.django_m2mpt_1, self.django_m2mpt_2)
+        
+        self.django_m2mctfrf = ManyToManyChildTestFollowRelatedFalseModel()
+        self.django_m2mctfrf.save()
+        self.django_m2mctfrf.m2m_test.add(self.django_m2mpt_1, self.django_m2mpt_2)
+        
+        
+    def cleanUp(self):
+        self.django_m2mpt_1.delete()
+        self.django_m2mpt_2.delete()
+        self.django_m2mct.delete()
+        self.django_m2mctfrf.delete()
+        
+    def test_m2m_conversion(self):
+        proto_m2mpt_1 = self.converter.djtopb(self.django_m2mpt_1)
+        proto_m2mpt_2 = self.converter.djtopb(self.django_m2mpt_2)
+        proto_m2mct = self.converter.djtopb(self.django_m2mct)
+        self.assertEqual(proto_m2mpt_1, proto_m2mct.m2m_test[0])
+        self.assertEqual(proto_m2mpt_2, proto_m2mct.m2m_test[1])
+        self.assertIn(self.django_m2mpt_1, self.converter.pbtodj(proto_m2mct).m2m_test.all())
+        self.assertIn(self.django_m2mpt_2, self.converter.pbtodj(proto_m2mct).m2m_test.all())
+        self.assertEqual(self.django_m2mct, self.converter.pbtodj(proto_m2mct))
+        
+    def test_m2m_conversion_follow_related_false(self):
+        proto_m2mpt_1 = self.converter.djtopb(self.django_m2mpt_1)
+        proto_m2mpt_2 = self.converter.djtopb(self.django_m2mpt_2)
+        proto_m2mctfrf = self.converter.djtopb(self.django_m2mctfrf)
+        self.assertEqual(self.django_m2mpt_1.id, proto_m2mctfrf.m2m_test[0])
+        self.assertEqual(self.django_m2mpt_2.id, proto_m2mctfrf.m2m_test[1])
+        self.assertIn(self.django_m2mpt_1, self.converter.pbtodj(proto_m2mctfrf).m2m_test.all())
+        self.assertIn(self.django_m2mpt_2, self.converter.pbtodj(proto_m2mctfrf).m2m_test.all())
+        self.assertEqual(self.django_m2mctfrf, self.converter.pbtodj(proto_m2mctfrf))
