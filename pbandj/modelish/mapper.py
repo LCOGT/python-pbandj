@@ -257,6 +257,10 @@ class MappedModule(object):
             # Add top level messages to proto model
             p.add_msg(mapped_model.pbandj_pb_msg)
             # Find messages included as fields and add to proto model
+            # TODO: Add multilevel field check for other messages
+            for field in mapped_model.pbandj_pb_msg.all_fields():
+                if isinstance(field.pb_type, message.Message):
+                    p.add_msg(field.pb_type) 
         for service in self.services:
             p.add_service(service)
         for xtra_import in self.xtra_proto_imports:
