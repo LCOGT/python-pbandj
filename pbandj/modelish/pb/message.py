@@ -92,7 +92,7 @@ class Message(object):
     def all_fields(self):
         """Get a flatened list of all fields
         """
-        return reduce(lambda x,y : x + y, [group.fields for group in self.fields.values])
+        return reduce(lambda x,y : x + y, [list(group['fields']) for group in self.fields.values()])
     
     
     def add_field_group(self, field_group, *field, **kwargs):
