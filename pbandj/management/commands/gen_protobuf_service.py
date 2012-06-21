@@ -27,7 +27,9 @@ class Command(BaseCommand):
         make_option('--target', dest='target', default=None,
             help='Set the name of the generated .proto file'),
         make_option('--pb2', dest='pb2', default=None,
-            help='Maintain field nubering from existing pb2 module'),                                             
+            help='Maintain field nubering from existing pb2 module'),
+        make_option('--external', dest='external', default=None,
+            help='External .proto files needed as import')                                          
     )
 
     help = "Generated Protocol Buffer service definitions and bindings"
@@ -42,6 +44,7 @@ class Command(BaseCommand):
         
         # See if the app exists
         app = app.split(".")[-1]
+#        import ipdb; ipdb.set_trace()
         service_mod = app + '.' + PBANDJ_SERVICE_MODULES.get(app, app + "." + PBANDJ_SERVICE_MODULE)
         try:
             service_mod = __import__(service_mod, fromlist=[app])
@@ -55,6 +58,8 @@ class Command(BaseCommand):
         mapped_module.add_import(app + '.proto')
         for xtra_import in service_registry.proto_imports:
             mapped_module.add_import(xtra_import)
+        if options.get('external', None) != None:
+            mapped_module.add_import(options.get('external'))
         for service_name, handlers in service_registry.services.items():
             pb_service = service.Service(service_name)
             service_handlers = {}

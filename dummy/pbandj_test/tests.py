@@ -19,7 +19,7 @@ from pbandj import decorator
 from pbandj import util
 from pbandj.conversion import Converter
 
-import pbandj_test.models as test_models
+#import pbandj_test.models as test_models
 
 @decorator.protocol_buffer_message
 class MessageTestModel(models.Model):
