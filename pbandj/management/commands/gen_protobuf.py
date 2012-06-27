@@ -74,9 +74,10 @@ class Command(BaseCommand):
         util.generate_pb2_module(mapped_module)
 #        mod_name = pbandj.genMod(pb)
         
-        pickeled_model_file = open(app + "/" + "pickeled_pbandj.model", 'w')
-        pickle.dump(mapped_module, pickeled_model_file)
-        pickeled_model_file.close()
+        util.save_module(mapped_module)
+#        pickeled_model_file = open(app + "/" + "pickeled_pbandj.model", 'w')
+#        pickle.dump(mapped_module, pickeled_model_file)
+#        pickeled_model_file.close()
 
 #if __name__ == "__main__":
 #    from obsdb import pb

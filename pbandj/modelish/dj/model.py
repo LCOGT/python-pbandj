@@ -124,7 +124,7 @@ class Model(object):
             field_set = useable_field_names
         
         # Instantiate pbandj model
-        model = Model(dj_model._meta.module_name)
+        model = Model(dj_model._meta.object_name)
         # Add a field for each remaining django field in the set
         for field_name in field_set:
             field = django_field_by_name[field_name]

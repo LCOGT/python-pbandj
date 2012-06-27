@@ -4,6 +4,7 @@ from dj.field import ForeignKey, ManyToMany
 from dj.model import Model
 from pb import message, field, proto, enum
 from types import DJ2PB
+from pbandj.conversion import Converter
 
 
 
@@ -89,7 +90,7 @@ def model_to_field_map(pbandj_dj_model, pb_field_num_start=0, pb_field_num_map=N
         else:
             if(pbandj_dj_field.choices):
                 enum_doc = "Generated from 'choices' for django model field: %s.%s" % (pbandj_dj_model.name, pbandj_dj_field.name)
-                field_enum = enum.Enum(pbandj_dj_field.name + "_choices", [a for a,b in pbandj_dj_field.choices], enum_doc)
+                field_enum = enum.Enum(pbandj_dj_field.name.capitalize() , [a for a,b in pbandj_dj_field.choices], enum_doc)
                 pbandj_pb_field = field.Field(field.OPTIONAL, pbandj_dj_field.name, field_enum, pb_field_num + 1)                  
             else:
                 pbandj_pb_field = field.Field(field.OPTIONAL, pbandj_dj_field.name, DJ2PB.get(pbandj_dj_field.dj_type), pb_field_num + 1)
@@ -266,6 +267,12 @@ class MappedModule(object):
         for xtra_import in self.xtra_proto_imports:
             p.add_import(xtra_import)
         return p
+    
+    def converter(self):
+        """Convenience method to get a Converter object for
+        this mapped_module
+        """
+        return Converter(self)
     
     @property
     def proto_filename(self):
