@@ -103,8 +103,7 @@ class Message(object):
             
             Optional Args:
             group_doc - (str) Comment preceding a group of fields
-            field - (pbandj.model.Field) field to be added to
-                     the message
+            field - (pb.Field) field to be added to the message
         """
         dest_group = self.fields[field_group] =  {
                                                   'doc' : kwargs.get('group_doc', None),
@@ -135,6 +134,32 @@ class Message(object):
         dest_group = self.fields[field_group]
         dest_group['fields'] += field
         
+    
+    def merge(self, message):
+        """Merge this message with the supplied message.
+        """
+        # Create a new message with name and doc from implicit arg
+        new_msg = Message(self.name, self.doc)
+        
+        # Iterate through field groups from implicit arg and merge any fields
+        # found in explicit arg field group with the same name
+        for group_name, group in self.fields.items():
+            field_set = set(group['fields'])
+            merge_group = message.field_group(group_name)
+            merge_field_set = set()
+            if merge_group != None:
+                merge_field_set = set(merge_group['fields'])
+            field_set.union(merge_field_set)
+            new_msg.add_field_group(group_name, *list(field_set), group_doc=group['doc'])
+        
+        # Iterate through explicit arg field groups and add any groups
+        # not already known my name in the new message   
+        for group_name, group in message.fields.items():
+            if new_msg.field_group(group_name) == None:
+                new_msg.add_field_group(group_name, *group['fields'], group_doc = group['doc'])                
+        
+        return new_msg
+    
     
     def __str__(self):
         """ Produces a .proto file message declaration

@@ -19,7 +19,7 @@ from pbandj import decorator
 from pbandj import util
 from pbandj.conversion import Converter
 
-#import pbandj_test.models as test_models
+import pbandj_test.models as test_models
 
 @decorator.protocol_buffer_message
 class MessageTestModel(models.Model):
@@ -500,9 +500,9 @@ class TestDjangoForeignKeyConversion(TestCase):
     def test_fk_conversion_follow_related_false(self):
         proto_fkpt = self.converter.djtopb(self.django_fkpt)
         proto_fkctfrf = self.converter.djtopb(self.django_fkctfrf)
-        self.assertEqual(self.django_fkpt.id, proto_fkctfrf.fkey_test)
-        self.assertEqual(self.django_fkpt.pk, proto_fkctfrf.fkey_test)
-        self.assertEqual(self.django_fkctfrf.fkey_test_id, proto_fkctfrf.fkey_test)
+        self.assertEqual(self.django_fkpt.id, proto_fkctfrf.fkey_test.id)
+        self.assertEqual(self.django_fkpt.pk, proto_fkctfrf.fkey_test.id)
+        self.assertEqual(self.django_fkctfrf.fkey_test_id, proto_fkctfrf.fkey_test.id)
         self.assertEqual(self.django_fkpt, self.converter.pbtodj(proto_fkctfrf).fkey_test)
         
 
@@ -575,8 +575,110 @@ class TestDjangoManyToManyConversion(TestCase):
         proto_m2mpt_1 = self.converter.djtopb(self.django_m2mpt_1)
         proto_m2mpt_2 = self.converter.djtopb(self.django_m2mpt_2)
         proto_m2mctfrf = self.converter.djtopb(self.django_m2mctfrf)
-        self.assertEqual(self.django_m2mpt_1.id, proto_m2mctfrf.m2m_test[0])
-        self.assertEqual(self.django_m2mpt_2.id, proto_m2mctfrf.m2m_test[1])
+        self.assertEqual(self.django_m2mpt_1.id, proto_m2mctfrf.m2m_test[0].id)
+        self.assertEqual(self.django_m2mpt_2.id, proto_m2mctfrf.m2m_test[1].id)
         self.assertIn(self.django_m2mpt_1, self.converter.pbtodj(proto_m2mctfrf).m2m_test.all())
         self.assertIn(self.django_m2mpt_2, self.converter.pbtodj(proto_m2mctfrf).m2m_test.all())
         self.assertEqual(self.django_m2mctfrf, self.converter.pbtodj(proto_m2mctfrf))
+        
+        
+
+
+# No decorator on this model to test if its reference from a child
+# model get's it's model included in the set of mapped modules
+class NoDecoratorForeignKeyParentTestModel(models.Model):
+    val = models.IntegerField()
+
+
+@decorator.protocol_buffer_message
+class NoDecoratorForeignKeyChildTestModel(models.Model):
+    fkey_test = models.ForeignKey(NoDecoratorForeignKeyParentTestModel)
+    
+
+# This test is expected to fail for now.    
+class TestDjangoNoDecoratorForeignKeyConversion(TestCase):
+    
+    mapped_module = None
+    converter = None
+    pb2 = None
+    
+    @classmethod
+    def setUpClass(cls):
+        cls.mapped_module = mapper.MappedModule('TestDjangoNoDecoratorForeignKeyConversion')
+        cls.mapped_module.add_mapped_model(NoDecoratorForeignKeyChildTestModel.generate_protocol_buffer())
+#        cls.mapped_module.add_mapped_model(ForeignKeyChildTestFollowRelatedFalseModel.generate_protocol_buffer())
+        util.generate_pb2_module(cls.mapped_module)
+        cls.pb2 = cls.mapped_module.load_pb2()
+        cls.converter = Converter(cls.mapped_module)
+        
+    def setUp(self):
+        self.django_fkpt = NoDecoratorForeignKeyParentTestModel()
+        self.django_fkpt.val = 1
+        self.django_fkpt.save()
+        
+        self.django_fkct = NoDecoratorForeignKeyChildTestModel()
+        self.django_fkct.fkey_test = self.django_fkpt
+        self.django_fkct.save()
+        
+#        self.django_fkctfrf = ForeignKeyChildTestFollowRelatedFalseModel()
+#        self.django_fkctfrf.fkey_test = self.django_fkpt
+#        self.django_fkctfrf.save()
+        
+    def cleanUp(self):
+        self.django_fkpt.delete()
+        self.django_fkct.delete()
+        self.django_fkctfrf.delete()
+        
+        
+    def test_fk_conversion(self):
+        proto_fkpt = self.converter.djtopb(self.django_fkpt)
+        proto_fkct = self.converter.djtopb(self.django_fkct)
+        self.assertEqual(proto_fkpt, proto_fkct.fkey_test)
+        self.assertEqual(self.django_fkpt, self.converter.pbtodj(proto_fkct).fkey_test)
+        proto_fkpt = self.converter.djtopb(self.django_fkpt)
+
+
+@decorator.protocol_buffer_message        
+class OneToOneParentTestModel(models.Model):
+    val = models.IntegerField()
+
+    
+@decorator.protocol_buffer_message   
+class OneToOneChildTestModel(models.Model):
+    o2o_test = models.OneToOneField(OneToOneParentTestModel)
+    
+
+class TestDjangoOneToOneFieldConversion(TestCase):
+    
+    mapped_module = None
+    converter = None
+    pb2 = None
+    
+    @classmethod
+    def setUpClass(cls):
+        cls.mapped_module = mapper.MappedModule('TestDjangoOneToOneFieldConversion')
+        cls.mapped_module.add_mapped_model(OneToOneParentTestModel.generate_protocol_buffer())
+        cls.mapped_module.add_mapped_model(OneToOneChildTestModel.generate_protocol_buffer())
+        util.generate_pb2_module(cls.mapped_module)
+        cls.pb2 = cls.mapped_module.load_pb2()
+        cls.converter = Converter(cls.mapped_module)
+        
+    def setUp(self):
+        self.django_o2opt = OneToOneParentTestModel()
+        self.django_o2opt.val = 1
+        self.django_o2opt.save()
+        
+        self.django_o2oct = OneToOneChildTestModel()
+        self.django_o2oct.o2o_test = self.django_o2opt
+        self.django_o2oct.save()
+        
+        
+    def cleanUp(self):
+        self.django_o2opt.delete()
+        self.django_o2oct.delete()
+           
+    def test_o2o_conversion(self):
+        proto_o2opt = self.converter.djtopb(self.django_o2opt)
+        proto_o2oct = self.converter.djtopb(self.django_o2oct)
+        self.assertEqual(proto_o2opt, proto_o2oct.o2o_test)
+        self.assertEqual(self.django_o2opt, self.converter.pbtodj(proto_o2oct).o2o_test)

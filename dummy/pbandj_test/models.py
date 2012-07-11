@@ -129,3 +129,7 @@ class ConvolutedM2MAssocRecursionTest(models.Model):
     simple_fk = models.ForeignKey(Simple)
     m2m_fk = models.ForeignKey(ConvolutedRecursionTest)
     m2m_assoc_fk = models.ForeignKey(ConvolutedForeignKeyTest)
+    
+class OneToOneTest(models.Model):
+    o2o_test = models.OneToOneField(Simple)
+    

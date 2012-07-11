@@ -53,7 +53,15 @@ class Proto(object):
         Args:
         message - (Message) The message to be added
         """
-        self.messages[message.name] = message
+        if self.messages.has_key(message.name):
+#            import ipdb; ipdb.set_trace();
+            print "Warning: Collision in .proto definition on message name " + message.name + ". Attempting to merge messages."
+            print self.messages[message.name], message
+            new_msg = self.messages[message.name].merge(message)
+            print "merged message", new_msg
+#            raise Exception("Collision on message name, " + message.name)
+        else:
+            self.messages[message.name] = message
        
      
     def add_service(self, service):

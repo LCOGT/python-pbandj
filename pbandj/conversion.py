@@ -37,69 +37,6 @@ from modelish.pb import field
 from modelish.dj.field import ForeignKey, ManyToMany
 
 
-#def _date_dj2pb(val, kwargs):
-#    '''Convert Django DateField to a protocol buffer Date message'''
-#    date = proto.Date()
-#    date.year = val.year
-#    date.month = val.month
-#    date.day = val.day
-#    return date
-#
-#def _date_pb2dj(val, kwargs):
-#    '''Convert a protocol buffer Date msg to a Django DateField'''
-#    return datetime(val.year, val.month, val.day)
-#    
-#def _datetime_dj2pb(val, kwargs):
-#    '''Convert Django DateTimeField to a protocol buffer Date message'''
-#    date = proto.Date()
-#    date.year = val.year
-#    date.month = val.month
-#    date.day = val.day
-#    date.time.hour = val.hour
-#    date.time.minute = val.minute
-#    date.time.second = val.second
-#    #date.time.micro = val.microsecond
-#    return date
-#
-#def _datetime_pb2dj(val, kwargs):
-#    '''Convert protocol buffer Date msg to Django DateTimeField'''
-#    return datetime(val.year, val.month, val.day, val.time.hour,
-#                    val.time.minute, val.time.second)#, val.time.micro)
-#    
-#def _time_dj2pb(val, kwargs):
-#    '''Convert  Django TimeField to a protocol buffer Time msg'''
-#    time = proto.Time()
-#    time.hour = val.hour
-#    time.minute = val.minute
-#    time.second = val.second
-#    #time.micro = val.microsecond
-#    return time
-#
-#def _time_pb2dj(val, kwargs):
-#    '''Convert protocol buffer Time msg to Django TimeField'''
-#    file = models.FileField
-#    return time(val.hour, val.minute, val.second)#, val.micro)
-
-#def _m2m_pb2dj(val, kwargs):
-#    output_type = kwargs['output_type']
-#    model_type = output_type.to
-#    if not output_type.through is None:
-#        model_type = output_type.through
-#    if isinstance(model_type, str):
-#        model_type = models.__dict__[model_type]
-#    return model_type.objects.get(pk=val)
-
-
-#class FieldConverter(object):
-#    
-#    def __init__(self, infield, outfield):
-#        self.infield = infield
-#        self.outfield = outfield
-#        
-#    def convert(self, val):
-#        pass
-
-
 class Converter(object):
     
     def __init__(self, mapped_module):
@@ -163,48 +100,6 @@ class Converter(object):
         
         conv_helpers[(models.CharField, Enum)] = \
                           lambda input_type, output_type, val: output_type[val]
-                          
-#        conv_helpers[(models.ForeignKey, types.PB_TYPE_INT32)] = \
-#                          lambda val, kwargs: val.pk
-#                          
-#        conv_helpers[(types.PB_TYPE_INT32, models.ForeignKey)] = \
-#                          lambda val, kwargs: kwargs['output_type'].related_model.objects.get(pk=val).pk
-                          
-#        conv_helpers[(models.ForeignKey, Message)] = \
-#                          lambda val, kwargs: self.djtopb(kwargs['pb'], val, kwargs['module'])
-#                          #self.convert(kwargs['input_type'], kwargs['output_type'], val)
-#        
-#        conv_helpers[(Message, models.ForeignKey)] = \
-#                          lambda val, kwargs: self.pbtodj(kwargs['pb'], val)
-#                          #lambda val, kwargs: self.convert(kwargs['input_type'], kwargs['output_type'], val)
-        
-#        conv_helpers[(models.ManyToManyField, types.PB_TYPE_INT32)] = \
-#                          lambda input_type, output_type, val : val.pk
-#        
-#        conv_helpers[(types.PB_TYPE_INT32, models.ManyToManyField)] = \
-#                          lambda input_type, output_type, val : _m2m_pb2dj(val, kwargs)
-        
-#        conv_helpers[(models.ManyToManyField, Message)] = \
-#                          lambda input_type, output_type, val : self.djtopb(kwargs['pb'], val, kwargs['module'])
-#        
-#        conv_helpers[(Message, models.ManyToManyField)] = \
-#                          lambda input_type, output_type, val : val
-        
-        #Help convert string to Django comma separated integer
-        #conv_helpers[(types.PB_TYPE_STRING,
-        #              models.CommaSeparatedIntegerField)] = \
-        #                  lambda val, kwargs : eval(val)
-        #conv_helpers[(models.CommaSeparatedIntegerField,
-        #              types.PB_TYPE_STRING)] = \
-        #                  lambda val, kwargs : str(val)
-        
-#        conv_helpers[(models.DateTimeField, Message)] = _datetime_dj2pb
-#        conv_helpers[(models.DateField, Message)] = _date_dj2pb
-#        conv_helpers[(models.TimeField, Message)] = _time_dj2pb
-#
-#        conv_helpers[(Message, models.DateField)] = _date_pb2dj
-#        conv_helpers[(Message, models.DateTimeField)] = _datetime_pb2dj
-#        conv_helpers[(Message, models.TimeField)] = _time_pb2dj
 
         self.helpers = conv_helpers
         
@@ -300,19 +195,6 @@ class Converter(object):
 #        print "returning", type(result), result 
         return result
 
-#    def convert(self, input_type, output_type, val, **kwargs):
-#        '''Convert the input object to the output type and return an object of
-#           output type.  If there is not an existing mapping and conversion 
-#           helper between the type(input_obj) and output_type the input_obj
-#           will be returned unchanged
-#        '''
-#        print input_type, output_type, val
-#        helper = self.helpers.get((input_type, output_type), lambda x, kwargs : x)
-#        kwargs['input_type'] = input_type
-#        kwargs['output_type'] = output_type
-#        result = helper(val, kwargs)
-#        print "returning", type(result), result 
-#        return result
 
     def pbtodj(self, obj, dest_obj=None):
             """ Take a protocol buffer object whose class was generated by
@@ -333,6 +215,7 @@ class Converter(object):
                     break
 
             if mapped_model == None:
+                #print [model.pbandj_pb_msg.name for model in self.mapped_module.mapped_models]
                 raise Exception("No pbandj mapping found for protocol buffer message type %s" % pb_msg_name)
             
             if(not dest_obj is None):
@@ -423,20 +306,19 @@ class Converter(object):
                 for val in val_list:
                     try:
 #                        print dj_field.dj_type, isinstance(pb_field.pb_type, Enum)
-#                        pb_val = self.convert(dj_field.dj_type,
-#                                          pb_field.pb_type,
-#                                          val, pb=mapped_model, module=self.mapped_module.load_pb2())
-                        print type(val), dj_field, pb_field
+#                        print type(val), dj_field, pb_field
                         pb_val = self.convert_field(dj_field,
                                           pb_field,
                                           val)
+#                        print type(pb_val)
                     except Exception, e:
                         #print field.name, field.dj_type, field.pb_type
                         traceback.print_exc()
                         raise e
                     if isinstance(pb_field.pb_type, Message):
-                        print type(pb_val)
-                        print type(rep_field)
+#                        print "types"
+#                        print type(pb_val)
+#                        print type(rep_field)
                         rep_field.add().CopyFrom(pb_val)
                     else:
                         rep_field.append(pb_val)

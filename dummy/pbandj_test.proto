@@ -4,114 +4,132 @@
 option py_generic_services = true;
 option java_generic_services = true;
 
-message m2massoctest {
-	// Fields mapped from Django model m2massoctest
-	optional simple simple_fk = 1;
+message ManyToManyThroughTest {
+	// Fields mapped from relations to Django model ManyToManyThroughTest
+	repeated M2MAssocTest m2massoctest = 4;
+
+	// Fields mapped from Django model ManyToManyThroughTest
+	optional int32 test_val = 1;
+	optional int32 id = 2;
+	repeated M2MAssocTest m2m_test = 3;
+
+}
+
+message M2MAssocRecursionTest {
+	// Fields mapped from Django model M2MAssocRecursionTest
+	optional Simple simple_fk = 1;
 	optional int32 assoc_test = 2;
-	optional manytomanythroughtest m2m_fk = 3;
+	optional ManyToManyThroughRecursionTest m2m_fk = 3;
 	optional int32 id = 4;
 
 }
 
-message m2massocrecursiontest {
-	// Fields mapped from Django model m2massocrecursiontest
-	optional simple simple_fk = 1;
-	optional int32 assoc_test = 2;
-	optional manytomanythroughrecursiontest m2m_fk = 3;
-	optional int32 id = 4;
+message Simple {
+	// Fields mapped from relations to Django model Simple
+	repeated ConvolutedM2MAssocRecursionTest convolutedm2massocrecursiontest = 3;
+	repeated M2MAssocTest m2massoctest = 3;
+	repeated M2MAssocRecursionTest m2massocrecursiontest = 3;
+	optional OneToOneTest onetoonetest = 3;
+	repeated ForeignKeyTest foreignkeytest = 3;
 
-}
-
-message simple {
-	// Fields mapped from Django model simple
+	// Fields mapped from Django model Simple
 	optional int32 id = 1;
 	optional int32 val = 2;
 
 }
 
-message manytomanythroughtest {
-	// Fields mapped from Django model manytomanythroughtest
-	optional int32 test_val = 1;
-	optional int32 id = 2;
-	repeated m2massoctest m2m_test = 3;
+message M2MAssocTest {
+	// Fields mapped from Django model M2MAssocTest
+	optional Simple simple_fk = 1;
+	optional int32 assoc_test = 2;
+	optional ManyToManyThroughTest m2m_fk = 3;
+	optional int32 id = 4;
 
 }
 
-message manytomanythroughrecursiontest {
-	// Fields mapped from Django model manytomanythroughrecursiontest
+message ManyToManyThroughRecursionTest {
+	// Fields mapped from relations to Django model ManyToManyThroughRecursionTest
+	repeated M2MAssocRecursionTest m2massocrecursiontest = 4;
+
+	// Fields mapped from Django model ManyToManyThroughRecursionTest
 	optional int32 test_val = 1;
 	optional int32 id = 2;
-	repeated m2massocrecursiontest m2m_test = 3;
+	repeated M2MAssocRecursionTest m2m_test = 3;
 
 }
 
-message convolutedrecursiontest {
-	// Fields mapped from Django model convolutedrecursiontest
-	optional int32 test_val = 1;
-	optional int32 id = 2;
-	repeated convolutedm2massocrecursiontest m2m_test = 3;
-
-}
-
-message foreignkeytest {
-	// Fields mapped from Django model foreignkeytest
+message OneToOneTest {
+	// Fields mapped from Django model OneToOneTest
 	optional int32 id = 1;
-	optional simple fkey_test = 2;
+	optional Simple o2o_test = 2;
 
 }
 
-message foreignkeyrecursiontest {
-	// Fields mapped from Django model foreignkeyrecursiontest
+message ConvolutedRecursionTest {
+	// Fields mapped from relations to Django model ConvolutedRecursionTest
+	repeated ConvolutedM2MAssocRecursionTest convolutedm2massocrecursiontest = 4;
+	repeated ConvolutedForeignKeyTest convolutedforeignkeytest = 4;
+
+	// Fields mapped from Django model ConvolutedRecursionTest
+	optional int32 test_val = 1;
+	optional int32 id = 2;
+	repeated ConvolutedM2MAssocRecursionTest m2m_test = 3;
+
+}
+
+message ForeignKeyTest {
+	// Fields mapped from Django model ForeignKeyTest
 	optional int32 id = 1;
-	optional int32 fkey_test = 2;
+	optional Simple fkey_test = 2;
 
 }
 
-message convolutedm2massocrecursiontest {
-	// Fields mapped from Django model convolutedm2massocrecursiontest
-	optional convolutedforeignkeytest m2m_assoc_fk = 1;
-	optional simple simple_fk = 2;
+message ForeignKeyRecursionTest {
+	// Fields mapped from relations to Django model ForeignKeyRecursionTest
+	repeated ForeignKeyRecursionTest foreignkeyrecursiontest = 3;
+
+	// Fields mapped from Django model ForeignKeyRecursionTest
+	optional int32 id = 1;
+	optional ForeignKeyRecursionTest fkey_test = 2;
+
+}
+
+message ConvolutedM2MAssocRecursionTest {
+	// Fields mapped from Django model ConvolutedM2MAssocRecursionTest
+	optional ConvolutedForeignKeyTest m2m_assoc_fk = 1;
+	optional Simple simple_fk = 2;
 	optional int32 assoc_test = 3;
-	optional int32 m2m_fk = 4;
+	optional ConvolutedRecursionTest m2m_fk = 4;
 	optional int32 id = 5;
 
 }
 
-message enumtest {
-	// Generated from 'choices' for django model field: enumtest.enum_test
-	enum enum_test_choices {
-		val2 = 1;
-		val1 = 0;
+message EnumTest {
+	// Generated from 'choices' for django model field: EnumTest.enum_test
+	enum Enum_test {
+		Val2 = 1;
+		Val1 = 0;
 	}
 	
-	// Fields mapped from Django model enumtest
-	optional enum_test_choices enum_test = 1;
+	// Fields mapped from Django model EnumTest
+	optional Enum_test enum_test = 1;
 	optional int32 id = 2;
 
 }
 
-message manytomanytest {
-	// Fields mapped from Django model manytomanytest
+message ManyToManyTest {
+	// Fields mapped from Django model ManyToManyTest
 	optional int32 test_val = 1;
 	optional int32 id = 2;
-	repeated simple m2m_test = 3;
+	repeated Simple m2m_test = 3;
 
 }
 
-message convolutedforeignkeytest {
-	// Fields mapped from Django model convolutedforeignkeytest
-	optional int32 fkey_test2 = 1;
-	optional int32 id = 2;
-	optional convolutedrecursiontest fkey_test = 3;
-
+message ConvolutedForeignKeyTest {
 }
 
-message oneofeverything {
-	// Fields not mapped to Django model
-	optional string zfield = 32768;
-	optional int32 zanotherfield = 32769;
-
-	// Fields mapped from Django model oneofeverything
+message OneOfEverything {
+	// Fields mapped from Django model OneOfEverything
 	optional string image_test = 1;
 	optional int32 sm_int_test = 2;
 	optional int32 id = 3;
@@ -134,6 +152,10 @@ message oneofeverything {
 	optional double decimal_test = 20;
 	optional string comma_test = 21;
 	optional string file_test = 22;
+
+	// Fields not mapped to Django model
+	optional string zfield = 32768;
+	optional int32 zanotherfield = 32769;
 
 }
 

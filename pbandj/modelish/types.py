@@ -58,6 +58,7 @@ DJ2PB = {models.CharField: PB_TYPE_STRING,
          #models.XMLField: PB_TYPE_STRING,
          models.AutoField: PB_TYPE_INT32,
          models.ForeignKey: PB_TYPE_INT32,
+         models.OneToOneField: PB_TYPE_INT32,
          # TODO: Add a ManyToManyField mapping
          models.ManyToManyField: PB_TYPE_INT32 
          }

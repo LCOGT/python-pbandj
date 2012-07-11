@@ -57,7 +57,9 @@ def create_field(dj_field, **kwargs):
     Args:
     dj_field - (django field) - a django model field instance
     """
-    if isinstance(dj_field, dj_models.ForeignKey):
+    if isinstance(dj_field, dj_models.OneToOneField):
+        return field.OneToOne.from_dj_field(dj_field, **kwargs)
+    elif isinstance(dj_field, dj_models.ForeignKey):
         return field.ForeignKey.from_dj_field(dj_field, **kwargs)
     elif isinstance(dj_field, dj_models.ManyToManyField):
         return field.ManyToMany.from_dj_field(dj_field, **kwargs)
@@ -70,7 +72,7 @@ class Model(object):
     """
 
     @staticmethod
-    def from_django_model(dj_model, no_follow_fields=None, no_follow_models=None, **kwargs):
+    def from_django_model(dj_model, no_follow_fields=None, no_follow_models={}, **kwargs):
         """Create a model instance from a supplied django model
         """
         """ Create a protocol buffer message from a django type.
@@ -91,12 +93,12 @@ class Model(object):
                           Only used if follow_related=True
             no_follow_models - (List) Django models not to follow as relations
         """
-        
-        # Make sure this model isn't processed again after the first pass
-        if no_follow_models is None:
-            no_follow_models = [dj_model]
+        # Check for existing pbandj dj model.  If not found create one
+        model = no_follow_models.get(dj_model, None)
+        if model:
+            return model
         else:
-            no_follow_models.append(dj_model)
+            model = no_follow_models.setdefault(dj_model, Model(dj_model._meta.object_name))
         
         # Local fields
         django_class_fields = [field for field in 
@@ -123,18 +125,21 @@ class Model(object):
             useable_field_names = set(django_field_by_name.keys()) - set(exclude)
             field_set = useable_field_names
         
-        # Instantiate pbandj model
-        model = Model(dj_model._meta.object_name)
         # Add a field for each remaining django field in the set
         for field_name in field_set:
             field = django_field_by_name[field_name]
             model.fields.append(create_field(field, no_follow_models=no_follow_models, **kwargs))
-            
+       
+        # Add a reverse field for reverse relationships
+        related_field_list = dj_model._meta.get_all_related_objects() + dj_model._meta.get_all_related_many_to_many_objects()
+        for related_field in related_field_list:
+            model.related_fields.append(create_field(related_field.field, no_follow_models=no_follow_models, **kwargs))
             
         return model
         
     
-    def __init__(self, name=None, fields=None):
+    def __init__(self, name=None, fields=None, related_fields=None):
         self.name = name
         self.fields = fields if fields else []
+        self.related_fields = related_fields if related_fields else []
              

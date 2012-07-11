@@ -1,58 +1,10 @@
 import imp
 
-from dj.field import ForeignKey, ManyToMany
+from dj.field import OneToOne, ForeignKey, ManyToMany
 from dj.model import Model
 from pb import message, field, proto, enum
 from types import DJ2PB
 from pbandj.conversion import Converter
-
-
-
-#def model_to_message(dj_model, pb_field_num_start=0, pb_field_num_map=None):
-#    """ Create a pbandj protocol buffer model from a pbandj django model
-#    
-#    Args:
-#    pb_field_num_map - (dict) A mapping of protocol buffer fields to field numbers
-#    """
-#    # Initialize field number map
-#    if pb_field_num_map is None:
-#        pb_field_num_map = {}
-##        for pb_field in pb_msg.all_fields():
-##            pb_field_num_map[pb_field] = pb_field.field_num
-#
-#    # Create new message and populate with fields from django model            
-#    proto_msg = message.Message(dj_model.name)
-#    dj_to_pb_field_map = {}
-#    pb_msg_fields = []
-#    pb_enums = []
-#    pb_field_num = pb_field_num_start
-#    for dj_field in dj_model.fields:
-#        if isinstance(dj_field, ForeignKey) and isinstance(dj_field.dj_type, Model):
-#            fk_pb_msg = model_to_message(dj_field.dj_type)
-#            pb_field = field.Field(field.OPTIONAL, dj_field.name, fk_pb_msg, pb_field_num + 1)
-#        elif isinstance(dj_field, ManyToMany) and isinstance(dj_field.dj_type, Model):
-#            m2m_pb_msg = model_to_message(dj_field.dj_type)
-#            pb_field = field.Field(field.REPEATED, dj_field.name, m2m_pb_msg, pb_field_num + 1)
-#        else:
-#            if(dj_field.choices):
-#                enum_doc = "Generated from 'choices' for django model field: %s.%s" % (dj_model.name, dj_field.name)
-#                field_enum = enum.Enum(dj_field.name + "_choices", [a for a,b in dj_field.choices], enum_doc)
-#                pb_enums.append(field_enum)
-#                pb_field = field.Field(field.OPTIONAL, dj_field.name, field_enum, pb_field_num + 1)                  
-#            else:
-#                pb_field = field.Field(field.OPTIONAL, dj_field.name, DJ2PB.get(dj_field.dj_type).ptype, pb_field_num + 1)
-#        
-#        # Check the field number map for a matching field
-#        if pb_field in pb_field_num_map:
-#            pb_field.field_num = pb_field_num_map.get(pb_field)
-#        else:
-#            pb_field_num += 1
-#        pb_msg_fields.append(pb_field)
-#        dj_to_pb_field_map[pb_field.name] = (dj_field, pb_field)
-#    proto_msg.enums = pb_enums
-#    group_doc = 'Fields mapped from Django model %s' % dj_model.name
-#    proto_msg.add_field_group('mapped_fields', *pb_msg_fields, group_doc=group_doc)
-#    return (proto_msg, dj_to_pb_field_map)
     
 
 def model_to_field_map(pbandj_dj_model, pb_field_num_start=0, pb_field_num_map=None):
@@ -63,6 +15,13 @@ def model_to_field_map(pbandj_dj_model, pb_field_num_start=0, pb_field_num_map=N
     pbandj_dj_model - (model.dj.model) - Model used to create field map
     pb_field_num_map - (dict) A mapping of protocol buffer fields to field numbers
     """
+    field_maps =  model_to_field_map.processed_models.get(pbandj_dj_model, None)
+    if field_maps != None:
+        return field_maps
+    else:
+        field_maps = [{}, {}]
+        model_to_field_map.processed_models[pbandj_dj_model] = field_maps
+    
     # Initialize field number map
     if pb_field_num_map is None:
         pb_field_num_map = {}
@@ -70,20 +29,20 @@ def model_to_field_map(pbandj_dj_model, pb_field_num_start=0, pb_field_num_map=N
 #            pb_field_num_map[pb_field] = pb_field.field_num
 
     # Create new message and populate with fields from django model            
-    dj_to_pb_field_map = {}
+    dj_to_pb_field_map = field_maps[0]
     pb_field_num = pb_field_num_start
     for pbandj_dj_field in pbandj_dj_model.fields:
         if isinstance(pbandj_dj_field, ForeignKey):
             if isinstance(pbandj_dj_field.dj_type, Model):
-                fk_field_map = model_to_field_map(pbandj_dj_field.dj_type)
-                fk_pb_msg = field_map_to_message(pbandj_dj_field.dj_type.name, fk_field_map)
+                fk_field_map, fk_rel_map = model_to_field_map(pbandj_dj_field.dj_type)
+                fk_pb_msg = field_map_to_message(pbandj_dj_field.dj_type.name, fk_field_map, fk_rel_map)
                 pbandj_pb_field = field.Field(field.OPTIONAL, pbandj_dj_field.name, fk_pb_msg, pb_field_num + 1)
             else:
                 pbandj_pb_field = field.Field(field.OPTIONAL, pbandj_dj_field.name,  DJ2PB.get(pbandj_dj_field.dj_type), pb_field_num + 1)
         elif isinstance(pbandj_dj_field, ManyToMany):
             if isinstance(pbandj_dj_field.dj_type, Model):
-                m2m_field_map = model_to_field_map(pbandj_dj_field.dj_type)
-                m2m_pb_msg = field_map_to_message(pbandj_dj_field.dj_type.name, m2m_field_map)
+                m2m_field_map, m2m_rel_map = model_to_field_map(pbandj_dj_field.dj_type)
+                m2m_pb_msg = field_map_to_message(pbandj_dj_field.dj_type.name, m2m_field_map, m2m_rel_map)
                 pbandj_pb_field = field.Field(field.REPEATED, pbandj_dj_field.name, m2m_pb_msg, pb_field_num + 1)
             else:
                 pbandj_pb_field = field.Field(field.REPEATED, pbandj_dj_field.name, DJ2PB.get(pbandj_dj_field.dj_type), pb_field_num + 1)
@@ -101,19 +60,57 @@ def model_to_field_map(pbandj_dj_model, pb_field_num_start=0, pb_field_num_map=N
         else:
             pb_field_num += 1
         dj_to_pb_field_map[pbandj_pb_field.name] = (pbandj_dj_field, pbandj_pb_field)
-    return dj_to_pb_field_map
+    
+    # Add fields for mapped relations
+    dj_to_pb_relation_map = field_maps[1]
+    for pbandj_dj_relation in pbandj_dj_model.related_fields:
+        if isinstance(pbandj_dj_relation, OneToOne):
+            if isinstance(pbandj_dj_relation.dj_type, Model):
+                fk_field_map, fk_rel_map = model_to_field_map(pbandj_dj_relation.child_model)
+                fk_pb_msg = field_map_to_message(pbandj_dj_relation.child_model.name, fk_field_map, fk_rel_map)
+                pbandj_pb_field = field.Field(field.OPTIONAL, pbandj_dj_relation.related_model_field_name, fk_pb_msg, pb_field_num + 1)
+            else:
+                pbandj_pb_field = field.Field(field.OPTIONAL, pbandj_dj_relation.related_model_field_name,  DJ2PB.get(pbandj_dj_relation.dj_type), pb_field_num + 1)
+        elif isinstance(pbandj_dj_relation, ForeignKey):
+            if isinstance(pbandj_dj_relation.dj_type, Model):
+                fk_field_map, fk_rel_map = model_to_field_map(pbandj_dj_relation.child_model)
+                fk_pb_msg = field_map_to_message(pbandj_dj_relation.child_model.name, fk_field_map, fk_rel_map)
+                pbandj_pb_field = field.Field(field.REPEATED, pbandj_dj_relation.related_model_field_name, fk_pb_msg, pb_field_num + 1)
+            else:
+                pbandj_pb_field = field.Field(field.REPEATED, pbandj_dj_relation.related_model_field_name,  DJ2PB.get(pbandj_dj_relation.dj_type), pb_field_num + 1)
+        elif isinstance(pbandj_dj_relation, ManyToMany):
+            if isinstance(pbandj_dj_relation.dj_type, Model):
+                m2m_field_map, m2m_rel_map = model_to_field_map(pbandj_dj_relation.child_model)
+                m2m_pb_msg = field_map_to_message(pbandj_dj_relation.child_model.name, m2m_field_map, m2m_rel_map)
+                pbandj_pb_field = field.Field(field.REPEATED, pbandj_dj_relation.related_model_field_name, m2m_pb_msg, pb_field_num + 1)
+            else:
+                pbandj_pb_field = field.Field(field.REPEATED, pbandj_dj_relation.related_model_field_name, DJ2PB.get(pbandj_dj_relation.dj_type), pb_field_num + 1)
+        
+        # Check the field number map for a matching field
+        if pbandj_pb_field.field_key in pb_field_num_map.keys():
+            pbandj_pb_field.field_num = pb_field_num_map.get(pbandj_pb_field.field_key)
+        else:
+            pb_field_num += 1
+        dj_to_pb_relation_map[pbandj_pb_field.name] = (pbandj_dj_relation, pbandj_pb_field)
+
+    return field_maps
+model_to_field_map.processed_models = {}
 
 
-def field_map_to_message(name, field_map):
+def field_map_to_message(name, field_map, relation_map):
     pbandj_pb_msg = message.Message(name)
     # Extract mapped pbandj pb fields
     pbandj_pb_fields = [mapped_field[1] for mapped_field in field_map.values()]
+    pbandj_pb_relations = [mapped_field[1] for mapped_field in relation_map.values()]
     # Find any enums related to those fields and add them to the message
     pbandj_pb_enums = [field.pb_type for field in pbandj_pb_fields if isinstance(field.pb_type, enum.Enum)]
     pbandj_pb_msg.enums += pbandj_pb_enums
     # Add mapped field group to pbandj pb message model
-    group_doc = 'Fields mapped from Django model %s' % name
-    pbandj_pb_msg.add_field_group('mapped_fields', *pbandj_pb_fields, group_doc=group_doc)
+    field_group_doc = 'Fields mapped from Django model %s' % name
+    pbandj_pb_msg.add_field_group('mapped_fields', *pbandj_pb_fields, group_doc=field_group_doc)
+    # Add relation field group to pbandj pb message model
+    relation_group_doc = 'Fields mapped from relations to Django model %s' % name
+    pbandj_pb_msg.add_field_group('mapped_relations', *pbandj_pb_relations, group_doc=relation_group_doc)
     # Add unmapped field group pbandj pb message model
     pbandj_pb_msg.add_field_group('unmapped_fields', group_doc="Fields not mapped to Django model")
     return pbandj_pb_msg
@@ -152,30 +149,16 @@ class MappedModel(object):
         self.pbandj_dj_model = Model.from_django_model(dj_model, **kwargs)
         
         # Create field map
-        self.pb_to_dj_field_map = model_to_field_map(self.pbandj_dj_model,
+        fields, relations = model_to_field_map(self.pbandj_dj_model,
                                                      pb_field_num_start=self.__next_mapped_field,
                                                      pb_field_num_map=pb_field_num_map)
+        self.pb_to_dj_field_map = fields
+        self.pb_to_dj_relation_map = relations
         
         # Create pbandj pb messaage
-#        pb_msg, field_map = model_to_message(self.pbandj_model,
-#                                        pb_field_num_start=self.__next_mapped_field,
-#                                        pb_field_num_map=pb_field_num_map)
-#        self.pb_msg = pb_msg
-#        self.pb_to_dj_field_map = field_map
         if msg_name == None:
             msg_name = self.pbandj_dj_model.name
-        self.pbandj_pb_msg = message.Message(msg_name)
-        # Extract mapped pbandj pb fields
-        pbandj_pb_fields = [mapped_field[1] for mapped_field in self.pb_to_dj_field_map.values()]
-        # Find any enums related to those fields and add them to the message
-        pbandj_pb_enums = [field.pb_type for field in pbandj_pb_fields if isinstance(field.pb_type, enum.Enum)]
-        self.pbandj_pb_msg.enums += pbandj_pb_enums
-        # Add mapped field group to pbandj pb message model
-        group_doc = 'Fields mapped from Django model %s' % self.pbandj_dj_model.name
-        self.pbandj_pb_msg.add_field_group('mapped_fields', *pbandj_pb_fields, group_doc=group_doc)
-        
-        # Add unmapped field group pbandj pb message model
-        self.pbandj_pb_msg.add_field_group('unmapped_fields', group_doc="Fields not mapped to Django model")
+        self.pbandj_pb_msg = field_map_to_message(msg_name, fields, relations)
         
         
     def add_unmapped_field(self, usage, name, pb_type, field_num=None):
@@ -211,14 +194,6 @@ class MappedModel(object):
         """
         #TODO: Replace unmapped_fields with constant throughout code
         return self.pbandj_pb_msg.field_group('unmapped_fields').get('fields', [])
-        
-
-#class MappedService(object):
-#    
-#    def __init__(self):
-#        self.services = []
-        
-    
 
 
 class MappedModule(object):
