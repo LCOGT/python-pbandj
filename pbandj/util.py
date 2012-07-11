@@ -9,10 +9,12 @@ def write_proto_file(proto, path="."):
     f.close()
 
 
-def save_module(mapped_module, filename="pickeled_pbandj.model"):
+def save_module(mapped_module, filename="pickeled_pbandj.model", path=None):
     """Save a pickled representation of a mapped_module
     """
-    pickeled_model_file = open(mapped_module.module_name + "/" + filename, 'w')
+    if path == None:
+        path = './' + mapped_module.module_name
+    pickeled_model_file = open(path + "/" + filename, 'w')
     pickle.dump(mapped_module, pickeled_model_file)
     pickeled_model_file.close()
 
@@ -31,10 +33,10 @@ def restore_module(app, filename="pickeled_pbandj.model"):
     return mapped_module
 
 
-def save_service_module(mapped_module):
+def save_service_module(mapped_module, path=None):
     """Save a pickled representation of a service mapped_module
     """
-    save_module(mapped_module, filename="pickled_pbandj.service")
+    save_module(mapped_module, filename="pickled_pbandj.service", path=path)
     
     
 def restore_service_module(app):

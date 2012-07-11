@@ -59,6 +59,7 @@ class Proto(object):
             print self.messages[message.name], message
             new_msg = self.messages[message.name].merge(message)
             print "merged message", new_msg
+            self.messages[message.name] = new_msg
 #            raise Exception("Collision on message name, " + message.name)
         else:
             self.messages[message.name] = message

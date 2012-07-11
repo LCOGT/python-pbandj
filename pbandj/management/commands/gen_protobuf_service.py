@@ -82,7 +82,8 @@ class Command(BaseCommand):
         print proto
         util.generate_pb2_module(mapped_module)
 #        util.write_proto_file(pb)
-        util.save_service_module(mapped_module)
+	pathtomodule = './' + app
+        util.save_service_module(mapped_module, path=pathtomodule)
 #        pickeled_srvc_file = open(app + "/" + "pickeled_pbandj.service", 'w')
 #        pickle.dump(mapped_module, pickeled_srvc_file)
 #        pickeled_srvc_file.close()

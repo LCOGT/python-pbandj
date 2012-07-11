@@ -149,14 +149,17 @@ class Message(object):
             merge_field_set = set()
             if merge_group != None:
                 merge_field_set = set(merge_group['fields'])
-            field_set.union(merge_field_set)
+            field_set = field_set.union(merge_field_set)
             new_msg.add_field_group(group_name, *list(field_set), group_doc=group['doc'])
         
         # Iterate through explicit arg field groups and add any groups
         # not already known my name in the new message   
         for group_name, group in message.fields.items():
             if new_msg.field_group(group_name) == None:
-                new_msg.add_field_group(group_name, *group['fields'], group_doc = group['doc'])                
+                new_msg.add_field_group(group_name, *group['fields'], group_doc = group['doc'])
+                
+        enum_set = set(self.enums).union(message.enums)
+        new_msg.enums = list(enum_set)                
         
         return new_msg
     
