@@ -229,8 +229,13 @@ class Converter(object):
             else:
                 dj_obj = mapped_model.dj_model()
             
+            # Retrieve the set of mapped fields from the mapped model
+            mapped_fields = mapped_model.mapped_fields()
             # Iterate through msg fields and convert to django types
+#            for field.name, (pb_field, db_field) in 
             for (pb_field, val) in obj.ListFields():
+                if not mapped_fields.has_key(pb_field.name):
+                    continue
                 pbandj_dj_field, pbandj_pb_field = mapped_model.pb_to_dj_field_map[pb_field.name]
                 if pbandj_pb_field.usage == field.REPEATED:
                     # repeated fields imply some kind of foreign key relationship
