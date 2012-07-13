@@ -159,7 +159,13 @@ class MappedModel(object):
         if msg_name == None:
             msg_name = self.pbandj_dj_model.name
         self.pbandj_pb_msg = field_map_to_message(msg_name, fields, relations)
-        
+    
+    
+    def mapped_fields(self):
+        '''Get the field mapping for this model
+        Returns dict { 'field_name' : (pb.field, dj.field),...}
+        '''
+        return self.pb_to_dj_field_map
         
     def add_unmapped_field(self, usage, name, pb_type, field_num=None):
         """ Add an unmapped field to the mapped model.
