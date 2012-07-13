@@ -47,7 +47,7 @@ def restore_service_module(app):
     filename - (str) filename in the app directory of the pickled
                      service module
     """
-    return resore_module(app, filename="pickled_pbandj.service")
+    return restore_module(app, filename="pickled_pbandj.service")
 
 
 def generate_pb2_module(mapped_module, path="."):
