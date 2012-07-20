@@ -127,28 +127,8 @@ def service(service_name, service_method_name, input_type, output_type):
     '''
 
     def wrap(f):
-#        service_method = {
-#            'method' : service_method_name,
-#            'input' : input_type,
-#            'output' : output_type,
-#            'handler' : f 
-#        }
-#        service_entry = service_registry.setdefault(service_name, [])
-#        service_entry.append(service_method)
-#        input_type = input_type.generate_protocol_buffer()
-#        output_type = output_type.generate_protocol_buffer()
-#        input_model = input_type
-#        if isinstance(input_type, type) and models.Model in input_type.__bases__: 
-#            input_model = input_type.generate_protocol_buffer()
-#        output_model = output_type
-#        if isinstance(output_type, type) and models.Model in output_type.__bases__: 
-#            output_model = output_type.generate_protocol_buffer()
         meta = ServiceMeta(service_name, service_method_name, input_type, output_type)
         service_registry.register(f, meta)
-#        d.__pbandj = meta
-#        if not hasattr(f, '__pbandj'):
-#            f.__pbandj = {}
-#        f.__pbandj['service'] = service_method
         return f    
     return wrap
 
