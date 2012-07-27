@@ -1,2 +1,0 @@
-Django>=1.0.2-final
-protobuf>=2.4.1
