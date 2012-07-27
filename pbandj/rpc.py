@@ -61,7 +61,6 @@ class ServiceThread(threading.Thread):
     def run(self):
         """ Start service thread """
         # Create a server instance
-        import ipdb; ipdb.set_trace();
         server = SocketRpcServer(self.port,host='')
         for service in self.service_module.services:
             service_class = getattr(self.service_pb2_module, service.name)
