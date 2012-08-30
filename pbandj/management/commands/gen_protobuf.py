@@ -73,8 +73,8 @@ class Command(BaseCommand):
         print proto
         util.generate_pb2_module(mapped_module)
 #        mod_name = pbandj.genMod(pb)
-        
-        util.save_module(mapped_module)
+        app_path, module_file = os.path.split(app_module.__file__) 
+        util.save_module(mapped_module, path=app_path)
 #        pickeled_model_file = open(app + "/" + "pickeled_pbandj.model", 'w')
 #        pickle.dump(mapped_module, pickeled_model_file)
 #        pickeled_model_file.close()
