@@ -1,6 +1,6 @@
 import pickle
 
-from os import system
+import os
 from modelish.pb.proto import Proto
 
 def write_proto_file(proto, path="."):
@@ -14,12 +14,12 @@ def save_module(mapped_module, filename="pickeled_pbandj.model", path=None):
     """
     if path == None:
         path = './' + mapped_module.module_name
-    pickeled_model_file = open(path + "/" + filename, 'w')
+    pickeled_model_file = open(os.path.join(path, filename), 'w')
     pickle.dump(mapped_module, pickeled_model_file)
     pickeled_model_file.close()
 
 
-def restore_module(app, filename="pickeled_pbandj.model"):
+def restore_module(app, filename="pickeled_pbandj.model", path=None):
     """Restore and return a mapped module from it's pickled
     representation
     
@@ -27,7 +27,10 @@ def restore_module(app, filename="pickeled_pbandj.model"):
     filename - (str) filename in the app directory of the pickled
                      service module
     """
-    pickeled_model_file = open(app + "/" + filename, 'r')
+    if path:
+        pickeled_model_file = open(os.path.join(path, filename), 'r')
+    else:
+        pickeled_model_file = open(os.path.join(app, filename), 'r')
     mapped_module = pickle.load(pickeled_model_file)
     pickeled_model_file.close()
     return mapped_module
@@ -39,7 +42,7 @@ def save_service_module(mapped_module, path=None):
     save_module(mapped_module, filename="pickled_pbandj.service", path=path)
     
     
-def restore_service_module(app):
+def restore_service_module(app, path=None):
     """Restore and return a service mapped module from it's pickled
     representation
     
@@ -47,7 +50,7 @@ def restore_service_module(app):
     filename - (str) filename in the app directory of the pickled
                      service module
     """
-    return restore_module(app, filename="pickled_pbandj.service")
+    return restore_module(app, filename="pickled_pbandj.service", path=path)
 
 
 def generate_pb2_module(mapped_module, path="."):
@@ -66,11 +69,11 @@ def generate_pb2_module(mapped_module, path="."):
     # Generate pb2 moduels for them
     for ext_proto in proto.imports:
         if not isinstance(ext_proto, Proto):
-            system("protoc --python_out=" + path + 
+            os.system("protoc --python_out=" + path + 
                    " --proto_path=" + path + " " +
                    path + "/" + ext_proto)
     
-    system("protoc --python_out=" + path +
+    os.system("protoc --python_out=" + path +
            " --proto_path=" + path + " " +
            path + "/" + mapped_module.proto_filename)
                

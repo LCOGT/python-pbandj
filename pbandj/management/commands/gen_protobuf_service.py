@@ -40,13 +40,18 @@ class Command(BaseCommand):
         if not app:
             print "Please specify an app."
             return
-        
+
         # See if the app exists
         app = app.split(".")[-1]
-#        import ipdb; ipdb.set_trace()
-        service_mod = app + '.' + PBANDJ_SERVICE_MODULES.get(app, app + "." + PBANDJ_SERVICE_MODULE)
+
         try:
-            service_mod = __import__(service_mod, fromlist=[app])
+            app_module = models.get_app(app)
+        except ImproperlyConfigured:
+            print "There is no enabled application matching '%s'." % app
+        service_mod = PBANDJ_SERVICE_MODULES.get(app, app + "." + PBANDJ_SERVICE_MODULE)
+        try:
+#            service_mod = __import__(service_mod, fromlist=[app])
+            service_mod = __import__(service_mod, fromlist=[app_module.__package__])
         except Exception, e:
             print e
             return
@@ -82,7 +87,7 @@ class Command(BaseCommand):
         print proto
         util.generate_pb2_module(mapped_module)
 #        util.write_proto_file(pb)
-	pathtomodule = './' + app
+	pathtomodule = os.path.split(app_module.__file__)[0]
         util.save_service_module(mapped_module, path=pathtomodule)
 #        pickeled_srvc_file = open(app + "/" + "pickeled_pbandj.service", 'w')
 #        pickle.dump(mapped_module, pickeled_srvc_file)

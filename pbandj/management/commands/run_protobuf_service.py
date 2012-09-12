@@ -42,10 +42,14 @@ class Command(BaseCommand):
         
         # See if the app exists
         app = app.split(".")[-1]
-        
+        try:
+            app_module = models.get_app(app)
+        except ImproperlyConfigured:
+            print "There is no enabled application matching '%s'." % app
+        app_path = os.path.split(app_module.__file__)[0]
         # Load the pickled service module
-        mapped_module = util.restore_module(app)
-        service_module = util.restore_service_module(app)
+        mapped_module = util.restore_module(app, path=app_path)
+        service_module = util.restore_service_module(app, path=app_path)
         
         
         # Bind handlers to rpc implementation

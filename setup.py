@@ -29,11 +29,9 @@ if __name__ == '__main__':
 
     setup(
         name = "pbandj",
-        version = "2.0.0",
-#        packages=find_packages('.', exclude=['dummy']),
+        version = "2.0.1",
+        packages=find_packages('.', exclude=['dummy']),
 #        package_dir={'pbandj': 'pbandj'},
-        packages = ['pbandj'],
-#        package_dir = {'':'pbandj'},
         install_requires = ['Django>=1.0.2-final','protobuf>=2.4.1',],#'protobuf.socketrpc>=1.3.2'],
         author = "Zachary Walker",
         author_email = "zwalker@lcogt.net",
