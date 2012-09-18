@@ -5,6 +5,7 @@ when you run "manage.py test".
 Replace this with more appropriate tests for your application.
 """
 
+import decimal
 from datetime import datetime
 
 from django.db import models
@@ -187,6 +188,7 @@ class TestDjangoFieldConversion(TestCase):
         cls.mapped_module.add_mapped_model(test_models.OneOfEverything.generate_protocol_buffer())
         util.generate_pb2_module(cls.mapped_module)
         cls.converter = Converter(cls.mapped_module)
+        cls.pb2 = cls.mapped_module.load_pb2()
         
     def setUp(self):
         self.django_ooe = test_models.OneOfEverything()
@@ -237,21 +239,42 @@ class TestDjangoFieldConversion(TestCase):
         self.assertEqual('14:30:00.999999', proto_ooe.time_test)
         self.assertEqual(datetime(1980, 6, 10, 14, 30, 0, 999999).time(), self.converter.pbtodj(proto_ooe).time_test)
   
-    def test_decimal_conversion(self):
-        self.django_ooe.decimal_test = 0.0
+#    def test_decimal_conversion_python27(self):
+#        self.django_ooe.decimal_test = 0.0
+#        proto_ooe = self.converter.djtopb(self.django_ooe)
+#        self.assertEqual(0, proto_ooe.decimal_test)
+#        self.assertEqual(0, self.converter.pbtodj(proto_ooe).decimal_test)
+#        
+#        self.django_ooe.decimal_test = -1.2345
+#        proto_ooe = self.converter.djtopb(self.django_ooe)
+#        self.assertEqual(-1.2345, proto_ooe.decimal_test)
+#        self.assertEqual(-1.2345, self.converter.pbtodj(proto_ooe).decimal_test)
+#        
+#        self.django_ooe.decimal_test = 1.2345
+#        proto_ooe = self.converter.djtopb(self.django_ooe)
+#        self.assertEqual(1.2345, proto_ooe.decimal_test)
+#        self.assertEqual(1.2345, self.converter.pbtodj(proto_ooe).decimal_test)
+
+    def test_decimal_conversion_python(self):
+        self.django_ooe.decimal_test = '0.0'
         proto_ooe = self.converter.djtopb(self.django_ooe)
         self.assertEqual(0, proto_ooe.decimal_test)
         self.assertEqual(0, self.converter.pbtodj(proto_ooe).decimal_test)
-        
-        self.django_ooe.decimal_test = -1.2345
+
+        self.django_ooe.decimal_test = '-1.2345'
         proto_ooe = self.converter.djtopb(self.django_ooe)
         self.assertEqual(-1.2345, proto_ooe.decimal_test)
-        self.assertEqual(-1.2345, self.converter.pbtodj(proto_ooe).decimal_test)
-        
-        self.django_ooe.decimal_test = 1.2345
+        self.assertEqual(decimal.Decimal('-1.2345'), self.converter.pbtodj(proto_ooe).decimal_test)
+
+        self.django_ooe.decimal_test = '1.2345'
         proto_ooe = self.converter.djtopb(self.django_ooe)
         self.assertEqual(1.2345, proto_ooe.decimal_test)
-        self.assertEqual(1.2345, self.converter.pbtodj(proto_ooe).decimal_test)
+        self.assertEqual(decimal.Decimal('1.2345'), self.converter.pbtodj(proto_ooe).decimal_test)
+
+        proto_ooe = self.pb2.OneOfEverything()
+        proto_ooe.decimal_test = 1.2345
+        django_ooe = self.converter.pbtodj(proto_ooe)
+        self.assertEqual(proto_ooe.decimal_test, float(django_ooe.decimal_test))
         
     def test_float_conversion(self):
         self.django_ooe.float_test = 0.0
