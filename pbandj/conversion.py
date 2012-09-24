@@ -47,7 +47,7 @@ class Converter(object):
         
         #Django seems to require float values input as a string
         conv_helpers[(types.PB_TYPE_DOUBLE,
-                       models.DecimalField)] = lambda input_type, output_type, val : decimal.Decimal(val)
+                       models.DecimalField)] = lambda input_type, output_type, val : decimal.Decimal(str(val))
         
         #Convert Decimal back to a python float which is the same as a double
         #in protocol buffers apparently
