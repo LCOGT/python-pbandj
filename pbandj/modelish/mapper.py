@@ -275,11 +275,10 @@ class MappedModule(object):
         try:
             pb2_mod = imp.load_source(mod_name, mod_name + ".py")
         except Exception, e:
-            pass
-        try:
-            pb2_mod = imp.load_compiled(mod_name, mod_name + ".pyc")
-        except Exception, e:
-            pass
+            try:
+                pb2_mod = imp.load_compiled(mod_name, mod_name + ".pyc")
+            except Exception, e:
+                pass
         if pb2_mod == None:
             print "Unable to load service module " + mod_name
         self.__pb2 = pb2_mod
