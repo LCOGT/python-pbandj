@@ -257,7 +257,7 @@ class Converter(object):
             return dj_obj
     
     
-    def djtopb(self, obj, dest_obj=None):
+    def djtopb(self, obj, dest_obj=None, excludes=[]):
         """ Take a django object for which a protocol buffer message
             has been generated and return a related protocol buffer
             message.  Since the python implementation of protocol
@@ -272,6 +272,7 @@ class Converter(object):
                         that is related to the django object arg.
                         Instead of creating a new object this obj
                         will be loaded with data and returned
+            excludes - A list of field names to exclude from the conversion.
         """
         # Import the message type and instantiate if necessary
         dj_type = type(obj)
@@ -296,7 +297,10 @@ class Converter(object):
         # Get the pb message type and convert the django message 
 #        for mapped_field in mapped_model.pbandj_pb_msg.fields['mapped_fields']['fields']:
         for dj_field, pb_field in mapped_model.pb_to_dj_field_map.values():
-#            dj_field, pb_field = mapped_model.pb_to_dj_field_map[field.name]                  
+            # Skip conversion of any field in the excludes list
+            if dj_field.name in excludes:
+                continue
+            
             if pb_field.usage == field.REPEATED:
                 # Must be a ManyToMany type relation
                 val_list = []

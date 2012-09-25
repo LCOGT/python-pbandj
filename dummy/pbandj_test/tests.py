@@ -428,6 +428,61 @@ class TestDjangoFieldConversion(TestCase):
 #        self.assertEqual('<abc>123</abc>', self.converter.pbtodj(proto_ooe).xml_test)
         
 
+
+@decorator.protocol_buffer_message
+class ExcludeTest(models.Model):
+    test_char = models.CharField(max_length = 20)
+    test_char_exclude = models.CharField(max_length = 20)
+    
+
+
+class TestExcludeConversion(TestCase):
+    
+    mapped_module = None
+    converter = None
+    pb2 = None
+    
+    @classmethod
+    def setUpClass(cls):
+        cls.mapped_module = mapper.MappedModule('TestExcludeConversion')
+        cls.mapped_module.add_mapped_model(ExcludeTest.generate_protocol_buffer())
+        util.generate_pb2_module(cls.mapped_module)
+        cls.pb2 = cls.mapped_module.load_pb2()
+        cls.converter = Converter(cls.mapped_module)
+        
+    def setUp(self):
+        self.django_et = ExcludeTest()
+        
+    def test_exclude_conversion_no_exclude_arg(self):
+        self.django_et.test_char = "ABC"
+        self.django_et.test_char_exclude = "XYZ"
+        proto_et = self.converter.djtopb(self.django_et)
+        self.assertEqual("ABC", proto_et.test_char)
+        self.assertEqual("XYZ", proto_et.test_char_exclude)
+        
+    def test_exclude_conversion_exclude_empty_list(self, excludes=[]):
+        self.django_et.test_char = "ABC"
+        self.django_et.test_char_exclude = "XYZ"
+        proto_et = self.converter.djtopb(self.django_et)
+        self.assertEqual("ABC", proto_et.test_char)
+        self.assertEqual("XYZ", proto_et.test_char_exclude)
+        
+    def test_exclude_conversion_exclude_none(self, excludes=None):
+        self.django_et.test_char = "ABC"
+        self.django_et.test_char_exclude = "XYZ"
+        proto_et = self.converter.djtopb(self.django_et)
+        self.assertEqual("ABC", proto_et.test_char)
+        self.assertEqual("XYZ", proto_et.test_char_exclude)
+        
+    def test_exclude_conversion(self):
+        import ipdb; ipdb.set_trace();
+        self.django_et.test_char = "ABC"
+        self.django_et.test_char_exclude = "XYZ"
+        proto_et = self.converter.djtopb(self.django_et, excludes=['test_char_exclude'])
+        self.assertEqual("ABC", proto_et.test_char)
+        self.assertFalse(proto_et.HasField('test_char_exclude'))
+
+
 @decorator.protocol_buffer_message
 class EnumTest(models.Model):
     test_enum_choices = (('Val1', 'Long Name Val 1'),
