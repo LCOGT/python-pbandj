@@ -328,7 +328,7 @@ class Converter(object):
 #                        print "types"
 #                        print type(pb_val)
 #                        print type(rep_field)
-                        rep_field.add().CopyFrom(pb_val)
+                        rep_field.add().ParseFromString(pb_val.SerializeToString())
                     else:
                         rep_field.append(pb_val)
             else:
@@ -351,7 +351,7 @@ class Converter(object):
                     if isinstance(pb_field.pb_type, Message):
                         #getattr(protomsg, pb_field.name).CopyFrom(pb_val)
                         attr = getattr(protomsg, pb_field.name)
-                        attr.CopyFrom(pb_val)
+                        attr.ParseFromString(pb_val.SerializeToString())
                     else:
                         # print field.name
                         try:
