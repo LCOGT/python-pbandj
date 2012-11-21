@@ -194,7 +194,8 @@ class Message(object):
             if field_group.get('fields'):
                 if doc and doc.strip() != '':
                     message += "\t// %s\n" % doc
-                for field in field_group['fields']:
+                sorted_fields = sorted(list(field_group['fields']), lambda x,y : x.field_num - y.field_num)
+                for field in sorted_fields:
                     message += "\t%s\n" % field
                 message += "\n"
         

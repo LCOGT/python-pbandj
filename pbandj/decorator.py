@@ -62,7 +62,8 @@ def protocol_buffer_message(*args, **kwargs):
             if old_pb2_mod:
                 msg_desc = __get_msg_descriptor(old_pb2_mod, msg_name)
                 # Create a dict mapping tuples ('field_name', field_type) to field number
-                field_num_map = dict([field.Field(field.OPTIONAL, f.name, _PB_INTERNAL_TYPE_MAP[f.type].name, -1) for f in  msg_desc.fields])
+                field_num_list = [(f.number, field.Field(field.OPTIONAL, f.name, _PB_INTERNAL_TYPE_MAP[f.type].name, -1)) for f in  msg_desc.fields]
+                field_num_map = dict(field_num_list)
                 print field_num_map
                 kwargs['pb_field_num_map'] = field_num_map
             # TODO remove need to pass msg_name as non kwarg

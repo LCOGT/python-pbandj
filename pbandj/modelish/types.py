@@ -32,7 +32,7 @@ PB_TYPE_SINT32   = _make_type('PB_TYPE_SINT32'  ,'sint32'  ,17)
 PB_TYPE_SINT64   = _make_type('PB_TYPE_SINT64'  ,'sint64'  ,18)
 
 def pbtype_name(type_name):
-    return 'PB_TYPE_' + type_name.strip().upper()
+    return 'PB_' + type_name.strip().upper()
 
 DJ2PB = {models.CharField: PB_TYPE_STRING,
          models.DecimalField: PB_TYPE_DOUBLE,
