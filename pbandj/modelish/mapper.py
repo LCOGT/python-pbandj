@@ -7,7 +7,7 @@ from types import DJ2PB
 from pbandj.conversion import Converter
     
 
-def model_to_field_map(pbandj_dj_model, pb_field_num_start=0, pb_field_num_map=None):
+def model_to_field_map(pbandj_dj_model, pb_field_num_map=None):
     """ Create a mapping by field name to 
         (django_pbandj_model, protobuf_pbandj_model) field tuples.
     
@@ -30,18 +30,22 @@ def model_to_field_map(pbandj_dj_model, pb_field_num_start=0, pb_field_num_map=N
 
     # Create new message and populate with fields from django model            
     dj_to_pb_field_map = field_maps[0]
-    pb_field_num = pb_field_num_start
+    
+    # Set to highest field num less than mapped field start
+    used_mapped_field_numbers = [x for x in pb_field_num_map[pbandj_dj_model.name.upper()].values() if x < MappedModel.UNMAPPED_FIELD_START]
+    pb_field_num = max([MappedModel.MAPPED_FIELD_START] + used_mapped_field_numbers)
+    
     for pbandj_dj_field in pbandj_dj_model.fields:
         if isinstance(pbandj_dj_field, ForeignKey):
             if isinstance(pbandj_dj_field.dj_type, Model):
-                fk_field_map, fk_rel_map = model_to_field_map(pbandj_dj_field.dj_type)
+                fk_field_map, fk_rel_map = model_to_field_map(pbandj_dj_field.dj_type, pb_field_num_map=pb_field_num_map)
                 fk_pb_msg = field_map_to_message(pbandj_dj_field.dj_type.name, fk_field_map, fk_rel_map)
                 pbandj_pb_field = field.Field(field.OPTIONAL, pbandj_dj_field.name, fk_pb_msg, pb_field_num + 1)
             else:
                 pbandj_pb_field = field.Field(field.OPTIONAL, pbandj_dj_field.name,  DJ2PB.get(pbandj_dj_field.dj_type), pb_field_num + 1)
         elif isinstance(pbandj_dj_field, ManyToMany):
             if isinstance(pbandj_dj_field.dj_type, Model):
-                m2m_field_map, m2m_rel_map = model_to_field_map(pbandj_dj_field.dj_type)
+                m2m_field_map, m2m_rel_map = model_to_field_map(pbandj_dj_field.dj_type, pb_field_num_map=pb_field_num_map)
                 m2m_pb_msg = field_map_to_message(pbandj_dj_field.dj_type.name, m2m_field_map, m2m_rel_map)
                 pbandj_pb_field = field.Field(field.REPEATED, pbandj_dj_field.name, m2m_pb_msg, pb_field_num + 1)
             else:
@@ -55,8 +59,8 @@ def model_to_field_map(pbandj_dj_model, pb_field_num_start=0, pb_field_num_map=N
                 pbandj_pb_field = field.Field(field.OPTIONAL, pbandj_dj_field.name, DJ2PB.get(pbandj_dj_field.dj_type), pb_field_num + 1)
         
         # Check the field number map for a matching field
-        if pbandj_pb_field.field_key in pb_field_num_map.keys():
-            pbandj_pb_field.field_num = pb_field_num_map.get(pbandj_pb_field.field_key)
+        if pbandj_pb_field.field_key in pb_field_num_map[pbandj_dj_model.name.upper()].keys():
+            pbandj_pb_field.field_num = pb_field_num_map[pbandj_dj_model.name.upper()].get(pbandj_pb_field.field_key)
         else:
             pb_field_num += 1
         dj_to_pb_field_map[pbandj_pb_field.name] = (pbandj_dj_field, pbandj_pb_field)
@@ -66,29 +70,29 @@ def model_to_field_map(pbandj_dj_model, pb_field_num_start=0, pb_field_num_map=N
     for pbandj_dj_relation in pbandj_dj_model.related_fields:
         if isinstance(pbandj_dj_relation, OneToOne):
             if isinstance(pbandj_dj_relation.dj_type, Model):
-                fk_field_map, fk_rel_map = model_to_field_map(pbandj_dj_relation.child_model)
+                fk_field_map, fk_rel_map = model_to_field_map(pbandj_dj_relation.child_model, pb_field_num_map=pb_field_num_map)
                 fk_pb_msg = field_map_to_message(pbandj_dj_relation.child_model.name, fk_field_map, fk_rel_map)
                 pbandj_pb_field = field.Field(field.OPTIONAL, pbandj_dj_relation.related_model_field_name, fk_pb_msg, pb_field_num + 1)
             else:
                 pbandj_pb_field = field.Field(field.OPTIONAL, pbandj_dj_relation.related_model_field_name,  DJ2PB.get(pbandj_dj_relation.dj_type), pb_field_num + 1)
         elif isinstance(pbandj_dj_relation, ForeignKey):
             if isinstance(pbandj_dj_relation.dj_type, Model):
-                fk_field_map, fk_rel_map = model_to_field_map(pbandj_dj_relation.child_model)
+                fk_field_map, fk_rel_map = model_to_field_map(pbandj_dj_relation.child_model, pb_field_num_map=pb_field_num_map)
                 fk_pb_msg = field_map_to_message(pbandj_dj_relation.child_model.name, fk_field_map, fk_rel_map)
                 pbandj_pb_field = field.Field(field.REPEATED, pbandj_dj_relation.related_model_field_name, fk_pb_msg, pb_field_num + 1)
             else:
                 pbandj_pb_field = field.Field(field.REPEATED, pbandj_dj_relation.related_model_field_name,  DJ2PB.get(pbandj_dj_relation.dj_type), pb_field_num + 1)
         elif isinstance(pbandj_dj_relation, ManyToMany):
             if isinstance(pbandj_dj_relation.dj_type, Model):
-                m2m_field_map, m2m_rel_map = model_to_field_map(pbandj_dj_relation.child_model)
+                m2m_field_map, m2m_rel_map = model_to_field_map(pbandj_dj_relation.child_model, pb_field_num_map=pb_field_num_map)
                 m2m_pb_msg = field_map_to_message(pbandj_dj_relation.child_model.name, m2m_field_map, m2m_rel_map)
                 pbandj_pb_field = field.Field(field.REPEATED, pbandj_dj_relation.related_model_field_name, m2m_pb_msg, pb_field_num + 1)
             else:
                 pbandj_pb_field = field.Field(field.REPEATED, pbandj_dj_relation.related_model_field_name, DJ2PB.get(pbandj_dj_relation.dj_type), pb_field_num + 1)
         
         # Check the field number map for a matching field
-        if pbandj_pb_field.field_key in pb_field_num_map.keys():
-            pbandj_pb_field.field_num = pb_field_num_map.get(pbandj_pb_field.field_key)
+        if pbandj_pb_field.field_key in pb_field_num_map[pbandj_dj_model.name.upper()].keys():
+            pbandj_pb_field.field_num = pb_field_num_map[pbandj_dj_model.name.upper()].get(pbandj_pb_field.field_key)
         else:
             pb_field_num += 1
         dj_to_pb_relation_map[pbandj_pb_field.name] = (pbandj_dj_relation, pbandj_pb_field)
@@ -137,27 +141,28 @@ class MappedModel(object):
         # The actual django type
         self.dj_model = dj_model
         self.pb_field_num_map = pb_field_num_map
+        
+        # Initialize field num_map if needed
         if self.pb_field_num_map is None:
             self.pb_field_num_map = {}
-        # Set to highest field num less than unmapped field start
-        self.__next_mapped_field = max([MappedModel.MAPPED_FIELD_START] + 
-                                       [x for x in self.pb_field_num_map.values() if x < MappedModel.UNMAPPED_FIELD_START])
-        # Set to highest field num greater than unmapped field start
-        self.__next_unmapped_field = max([MappedModel.UNMAPPED_FIELD_START] + 
-                                         [x for x in self.pb_field_num_map.values() if x >= MappedModel.UNMAPPED_FIELD_START])
+            
         # Create pbandj dj model
         self.pbandj_dj_model = Model.from_django_model(dj_model, **kwargs)
-        
-        # Create field map
-        fields, relations = model_to_field_map(self.pbandj_dj_model,
-                                                     pb_field_num_start=self.__next_mapped_field,
-                                                     pb_field_num_map=pb_field_num_map)
-        self.pb_to_dj_field_map = fields
-        self.pb_to_dj_relation_map = relations
         
         # Create pbandj pb messaage
         if msg_name == None:
             msg_name = self.pbandj_dj_model.name
+         
+        # Set to highest field num greater than unmapped field start
+        used_unmapped_field_numbers = [x for x in self.pb_field_num_map[msg_name.upper()].values() if x >= MappedModel.UNMAPPED_FIELD_START]
+        self.__next_unmapped_field = max([MappedModel.UNMAPPED_FIELD_START] + used_unmapped_field_numbers)
+        
+        # Create field map
+        fields, relations = model_to_field_map(self.pbandj_dj_model,
+                                               pb_field_num_map=pb_field_num_map)
+        self.pb_to_dj_field_map = fields
+        self.pb_to_dj_relation_map = relations
+        
         self.pbandj_pb_msg = field_map_to_message(msg_name, fields, relations)
     
     

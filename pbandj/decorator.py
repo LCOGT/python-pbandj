@@ -1,24 +1,20 @@
 from django.db import models
-from google.protobuf import descriptor_pb2
 
 from modelish import mapper
 from modelish.pb import field
 
 
-_PB_INTERNAL_TYPE_MAP = descriptor_pb2._FIELDDESCRIPTORPROTO.enum_types_by_name['Type'].values_by_number
-
-
-def __msg_name_to_descriptor_name(msg_name):
-    ''' Convert a protocol buffer message name to the expected descriptor name
-        Ex. test -> _TEST
-    '''
-    return "_" + msg_name.upper()
-
-
-def __get_msg_descriptor(pb_mod, msg_name):
-    ''' Get the message descriptor for a named message from the supplied module
-    '''
-    return getattr(pb_mod, __msg_name_to_descriptor_name(msg_name))
+# def __msg_name_to_descriptor_name(msg_name):
+#     ''' Convert a protocol buffer message name to the expected descriptor name
+#         Ex. test -> _TEST
+#     '''
+#     return "_" + msg_name.upper()
+# 
+# 
+# def __get_msg_descriptor(pb_mod, msg_name):
+#     ''' Get the message descriptor for a named message from the supplied module
+#     '''
+#     return getattr(pb_mod, __msg_name_to_descriptor_name(msg_name))
 
 
 # When called with no args and no (), the decorator is called with the
@@ -46,9 +42,6 @@ def protocol_buffer_message(*args, **kwargs):
         def generate_protocol_buffer(**pbargs):
             ''' Generate a protocol buffer message descriptor
             
-            Args:
-            old_pb2_mod - (pb2) A previously generated pb2 module
-            
             Returns:
             A pbandj.model.ProtocolBuffer.Message object
             '''
@@ -58,14 +51,10 @@ def protocol_buffer_message(*args, **kwargs):
                 msg_name = kwargs['msg_name']
             
             # Create a field number map for old module id supplied
-            old_pb2_mod = pbargs.get('old_pb2_mod', None) 
-            if old_pb2_mod:
-                msg_desc = __get_msg_descriptor(old_pb2_mod, msg_name)
-                # Create a dict mapping tuples ('field_name', field_type) to field number
-                field_num_list = [(f.number, field.Field(field.OPTIONAL, f.name, _PB_INTERNAL_TYPE_MAP[f.type].name, -1)) for f in  msg_desc.fields]
-                field_num_map = dict(field_num_list)
-                print field_num_map
-                kwargs['pb_field_num_map'] = field_num_map
+            field_number_map = pbargs.get('field_number_map', {}) 
+            if field_number_map:
+                print field_number_map
+                kwargs['pb_field_num_map'] = field_number_map
             # TODO remove need to pass msg_name as non kwarg
             if kwargs.has_key('msg_name'):
                 return mapper.MappedModel(model, **kwargs)

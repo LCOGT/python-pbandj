@@ -53,6 +53,7 @@ class Command(BaseCommand):
         
         pb2_path = options.get('pb2')
         pb2_mod = None
+        field_number_map = {}
         if pb2_path:
             mod_name,file_ext = os.path.splitext(os.path.split(pb2_path)[-1])
             if file_ext == '.py':
@@ -62,9 +63,10 @@ class Command(BaseCommand):
             else:
                 print "Don't understand pb2 value %s" % pb2_path
                 sys.exit(1)
+            field_number_map = util.generate_field_number_map(pb2_mod)
 #        pb = ProtocolBuffer(app)
         mapped_module = mapper.MappedModule(app)
-        mapped_models = [model.generate_protocol_buffer(old_pb2_mod=pb2_mod) for model in model_list if hasattr(model, '__PBANDJ')]
+        mapped_models = [model.generate_protocol_buffer(old_pb2_mod=pb2_mod, field_number_map=field_number_map) for model in model_list if hasattr(model, '__PBANDJ')]
         for mapped_model in mapped_models:
 #            pb.addMessage(msg)
             mapped_module.add_mapped_model(mapped_model)

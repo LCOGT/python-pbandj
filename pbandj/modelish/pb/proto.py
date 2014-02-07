@@ -54,7 +54,6 @@ class Proto(object):
         message - (Message) The message to be added
         """
         if self.messages.has_key(message.name):
-#            import ipdb; ipdb.set_trace();
             print "Warning: Collision in .proto definition on message name " + message.name + ". Attempting to merge messages."
             print self.messages[message.name], message
             new_msg = self.messages[message.name].merge(message)

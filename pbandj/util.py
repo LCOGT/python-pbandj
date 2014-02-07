@@ -2,6 +2,10 @@ import pickle
 
 import os
 from modelish.pb.proto import Proto
+from modelish.pb import field
+from google.protobuf import descriptor_pb2
+
+PB_INTERNAL_TYPE_MAP = descriptor_pb2._FIELDDESCRIPTORPROTO.enum_types_by_name['Type'].values_by_number
 
 def write_proto_file(proto, path="."):
     f = open(path + "/" + proto.proto_filename(), 'w')
@@ -78,3 +82,14 @@ def generate_pb2_module(mapped_module, path="."):
            path + "/" + mapped_module.proto_filename)
                
     return mapped_module.pb2_module_name
+
+def generate_field_number_map(pb2_module):
+    field_number_map = {}
+    for name, msg_desc in pb2_module.DESCRIPTOR.message_types_by_name.items():
+        msg_field_number_map = {}
+        for f in msg_desc.fields:
+            pb_field = field.Field(field.OPTIONAL, f.name, PB_INTERNAL_TYPE_MAP[f.type].name, -1)
+            msg_field_number_map[pb_field.field_key] = f.number
+        field_number_map[name.upper()] = msg_field_number_map
+        
+    return field_number_map             

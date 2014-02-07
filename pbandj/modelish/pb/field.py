@@ -38,7 +38,12 @@ class Field(object):
         else:
             self.pb_type = pb_type
         self.field_num = int(field_num)
-        self.field_key = FieldKey(name, pb_type)
+        if isinstance(self.pb_type, Message):
+            self.field_key = FieldKey(name, types.PB_TYPE_MESSAGE)
+        elif isinstance(self.pb_type, Enum):
+            self.field_key = FieldKey(name, types.PB_TYPE_ENUM)
+        else:
+            self.field_key = FieldKey(name, self.pb_type)
     
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
