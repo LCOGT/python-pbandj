@@ -16,8 +16,6 @@ class Field(object):
         mapping to a related Django field
     """
     
-    
-    
     def __init__(self, usage, name, pb_type, field_num):
         """
             Accepted Arguments:

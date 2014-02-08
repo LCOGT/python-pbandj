@@ -64,28 +64,14 @@ class Command(BaseCommand):
                 print "Don't understand pb2 value %s" % pb2_path
                 sys.exit(1)
             field_number_map = util.generate_field_number_map(pb2_mod)
-#        pb = ProtocolBuffer(app)
         mapped_module = mapper.MappedModule(app)
         mapped_models = [model.generate_protocol_buffer(old_pb2_mod=pb2_mod, field_number_map=field_number_map) for model in model_list if hasattr(model, '__PBANDJ')]
         for mapped_model in mapped_models:
-#            pb.addMessage(msg)
             mapped_module.add_mapped_model(mapped_model)
         
         proto = mapped_module.generate_proto()
-        print proto
         util.generate_pb2_module(mapped_module)
-#        mod_name = pbandj.genMod(pb)
         app_path, module_file = os.path.split(app_module.__file__) 
         util.save_module(mapped_module, path=app_path)
-#        pickeled_model_file = open(app + "/" + "pickeled_pbandj.model", 'w')
-#        pickle.dump(mapped_module, pickeled_model_file)
-#        pickeled_model_file.close()
 
-#if __name__ == "__main__":
-#    from obsdb import pb
-#    pbandj.genMod(pb.model, "protobuf/src/main/lcogt/pond")
-#    pbandj.genMod(pb.services(), "protobuf/src/main/lcogt/pond")
-#    pbandj.genMod(pb.services())
-#    
-#    pbandj.genMod(pb.model, "client/python/src/lcogt/pond")
-#    pbandj.genMod(pb.services(), "client/python/src/lcogt/pond")   
+

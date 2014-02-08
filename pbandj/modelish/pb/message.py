@@ -68,25 +68,6 @@ class Message(object):
     # Be careful using hash
     def __hash__(self):
         return hash(self.name) ^ hash(tuple(self.fields))
-    
-#    def __add__(self, other):
-#        if not isinstance(other, self.__class__):
-#            raise Exception("Can't add type %s to a %s" % 
-#                            (type(other), type(self)))
-#        s1 = set(self.message_fields + self.fields + self.enums)
-#        s2 = set(other.message_fields + other.fields + other.enums)
-#        diff = s1.symmetric_difference(s2)
-#        self_names = set([obj.name for obj in s1.intersection(diff)])
-#        other_names = set([obj.name for obj in s2.intersection(diff)])
-#        colissions = self_names.intersection(other_names)
-#        if colissions != set():
-#            raise Exception("Namespace collision between messages on %s" % colissions)
-#        new_msg = ProtocolBuffer.Message(self.name, self.django_model_class)  
-#        new_msg.mapped_fields = self.mapped_fields
-#        new_msg.fields = list(set(self.fields).union(set(other.fields)))
-#        new_msg.message_fields = list(set(self.message_fields).union(set(other.message_fields)))
-#        new_msg.enums = list(set(self.enums).union(set(other.enums)))
-#        return new_msg
         
         
     def all_fields(self):
@@ -167,12 +148,6 @@ class Message(object):
     def __str__(self):
         """ Produces a .proto file message declaration
         """
-        # Start field numbers at the max of the existing field numbers
-#        mapped_field_num = 1 + max([x for x in self.field_number_map.values() if x < self.UNMAPPED_FIELD_START] + 
-#                               [self.MAPPED_FIELD_START])
-#        unmapped_field_num = 1 + max([x for x in self.field_number_map.values() if x >= self.UNMAPPED_FIELD_START]
-#                                      + [self.UNMAPPED_FIELD_START])
-        
         # Message doc   
         if self.doc != None:
             message = "// %s\n" % self.doc 

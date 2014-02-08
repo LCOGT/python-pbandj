@@ -25,8 +25,6 @@ def model_to_field_map(pbandj_dj_model, pb_field_num_map=None):
     # Initialize field number map
     if pb_field_num_map is None:
         pb_field_num_map = {}
-#        for pb_field in pb_msg.all_fields():
-#            pb_field_num_map[pb_field] = pb_field.field_num
 
     # Create new message and populate with fields from django model            
     dj_to_pb_field_map = field_maps[0]

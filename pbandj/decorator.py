@@ -4,19 +4,6 @@ from modelish import mapper
 from modelish.pb import field
 
 
-# def __msg_name_to_descriptor_name(msg_name):
-#     ''' Convert a protocol buffer message name to the expected descriptor name
-#         Ex. test -> _TEST
-#     '''
-#     return "_" + msg_name.upper()
-# 
-# 
-# def __get_msg_descriptor(pb_mod, msg_name):
-#     ''' Get the message descriptor for a named message from the supplied module
-#     '''
-#     return getattr(pb_mod, __msg_name_to_descriptor_name(msg_name))
-
-
 # When called with no args and no (), the decorator is called with the
 # type or function being decorated as first arg.
 # See http://stackoverflow.com/questions/653368/how-to-create-a-python-decorator-that-can-be-used-either-with-or-without-paramet
@@ -60,8 +47,6 @@ def protocol_buffer_message(*args, **kwargs):
                 return mapper.MappedModel(model, **kwargs)
             else:
                 return mapper.MappedModel(model, **kwargs)
-                #return genMsg(django_model_class=model, msg_name=model.__name__, **kwargs)
-#            return genMsg(msg_name, model_class, include, exclude, recurse_fk, no_recurse)
         
         model.generate_protocol_buffer = staticmethod(generate_protocol_buffer)
         model.__PBANDJ = True
