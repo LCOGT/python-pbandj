@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
     setup(
         name = "pbandj",
-        version = "2.0.1",
+        version = "2.0.3",
         packages=find_packages('.', exclude=['dummy']),
 #        package_dir={'pbandj': 'pbandj'},
         install_requires = ['Django>=1.0.2-final','protobuf>=2.4.1',],#'protobuf.socketrpc>=1.3.2'],
