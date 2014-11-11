@@ -19,11 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from ez_setup import use_setuptools
-use_setuptools()
-
 from setuptools import setup, find_packages
-
 
 if __name__ == '__main__':
 
