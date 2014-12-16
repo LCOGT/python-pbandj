@@ -30,7 +30,7 @@ def model_to_field_map(pbandj_dj_model, pb_field_num_map=None):
     dj_to_pb_field_map = field_maps[0]
     
     # Set to highest field num less than mapped field start
-    used_mapped_field_numbers = [x for x in pb_field_num_map[pbandj_dj_model.name.upper()].values() if x < MappedModel.UNMAPPED_FIELD_START]
+    used_mapped_field_numbers = [x for x in pb_field_num_map.get(pbandj_dj_model.name.upper(), {}).values() if x < MappedModel.UNMAPPED_FIELD_START]
     pb_field_num = max([MappedModel.MAPPED_FIELD_START] + used_mapped_field_numbers)
     
     for pbandj_dj_field in pbandj_dj_model.fields:
@@ -57,8 +57,8 @@ def model_to_field_map(pbandj_dj_model, pb_field_num_map=None):
                 pbandj_pb_field = field.Field(field.OPTIONAL, pbandj_dj_field.name, DJ2PB.get(pbandj_dj_field.dj_type), pb_field_num + 1)
         
         # Check the field number map for a matching field
-        if pbandj_pb_field.field_key in pb_field_num_map[pbandj_dj_model.name.upper()].keys():
-            pbandj_pb_field.field_num = pb_field_num_map[pbandj_dj_model.name.upper()].get(pbandj_pb_field.field_key)
+        if pbandj_pb_field.field_key in pb_field_num_map.get(pbandj_dj_model.name.upper(), {}).keys():
+            pbandj_pb_field.field_num = pb_field_num_map.get(pbandj_dj_model.name.upper(), {}).get(pbandj_pb_field.field_key)
         else:
             pb_field_num += 1
         dj_to_pb_field_map[pbandj_pb_field.name] = (pbandj_dj_field, pbandj_pb_field)
@@ -89,8 +89,8 @@ def model_to_field_map(pbandj_dj_model, pb_field_num_map=None):
                 pbandj_pb_field = field.Field(field.REPEATED, pbandj_dj_relation.related_model_field_name, DJ2PB.get(pbandj_dj_relation.dj_type), pb_field_num + 1)
         
         # Check the field number map for a matching field
-        if pbandj_pb_field.field_key in pb_field_num_map[pbandj_dj_model.name.upper()].keys():
-            pbandj_pb_field.field_num = pb_field_num_map[pbandj_dj_model.name.upper()].get(pbandj_pb_field.field_key)
+        if pbandj_pb_field.field_key in pb_field_num_map.get(pbandj_dj_model.name.upper(), {}).keys():
+            pbandj_pb_field.field_num = pb_field_num_map.get(pbandj_dj_model.name.upper(), {}).get(pbandj_pb_field.field_key)
         else:
             pb_field_num += 1
         dj_to_pb_relation_map[pbandj_pb_field.name] = (pbandj_dj_relation, pbandj_pb_field)
@@ -152,7 +152,7 @@ class MappedModel(object):
             msg_name = self.pbandj_dj_model.name
          
         # Set to highest field num greater than unmapped field start
-        used_unmapped_field_numbers = [x for x in self.pb_field_num_map[msg_name.upper()].values() if x >= MappedModel.UNMAPPED_FIELD_START]
+        used_unmapped_field_numbers = [x for x in self.pb_field_num_map.get(msg_name.upper(), {}).values() if x >= MappedModel.UNMAPPED_FIELD_START]
         self.__next_unmapped_field = max([MappedModel.UNMAPPED_FIELD_START] + used_unmapped_field_numbers)
         
         # Create field map
