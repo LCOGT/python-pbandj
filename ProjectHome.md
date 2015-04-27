@@ -1,0 +1,1 @@
+Utility for creating Protocol Buffer messages and services from a Django model.
