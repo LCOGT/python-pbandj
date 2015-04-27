@@ -19,25 +19,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from ez_setup import use_setuptools
-use_setuptools()
-
 from setuptools import setup, find_packages
-#import pbinstaller
-
-
-PROTOBUF_VERSION = '2.3.0'
-
 
 if __name__ == '__main__':
-#    pbinstaller.install(PROTOBUF_VERSION)
 
     setup(
         name = "pbandj",
-        version = "1.3.0",
-        packages = ['pbandj'],
-        package_dir = {'':'src/main'},
-        install_requires = ['Django>=1.0.2-final','protobuf==%s' % PROTOBUF_VERSION,'protobuf.socketrpc>=1.3.2'],
+        version = "2.0.3",
+        packages=find_packages('.', exclude=['dummy']),
+#        package_dir={'pbandj': 'pbandj'},
+        install_requires = ['Django>=1.0.2-final','protobuf>=2.4.1',],#'protobuf.socketrpc>=1.3.2'],
         author = "Zachary Walker",
         author_email = "zwalker@lcogt.net",
         description = "Utility for creating Protocol Buffer Messages and RPC services from a Django model",)
