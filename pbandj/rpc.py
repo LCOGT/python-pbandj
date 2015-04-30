@@ -34,12 +34,13 @@ RPC_PORT = 8091
 class ServiceThread(threading.Thread):
 
 
-    def __init__(self, mapped_module, service_module, port, daemon=False):
+    def __init__(self, mapped_module, service_module, port, timeout=None, daemon=False):
         threading.Thread.__init__(self)
         self.mapped_module = mapped_module
         self.service_module = service_module
         self.service_pb2_module = service_module.load_pb2()
         self.port = port
+        self.timeout = timeout
         self.setDaemon(daemon)
 
 
@@ -61,7 +62,7 @@ class ServiceThread(threading.Thread):
     def run(self):
         """ Start service thread """
         # Create a server instance
-        server = SocketRpcServer(self.port,host='')
+        server = SocketRpcServer(self.port, host='', timeout=self.timeout)
         for service in self.service_module.services:
             service_class = getattr(self.service_pb2_module, service.name)
             newservice = service_class()
