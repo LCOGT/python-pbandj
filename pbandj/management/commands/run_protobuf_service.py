@@ -53,7 +53,7 @@ class Command(BaseCommand):
         
         
         # Bind handlers to rpc implementation
-        sthread = ServiceThread(mapped_module, service_module, int(port), daemon, timeout=60)
+        sthread = ServiceThread(mapped_module, service_module, int(port), timeout=60, daemon=daemon)
         sthread.start()
         while(sthread.is_alive()):
             sthread.join(1)     
